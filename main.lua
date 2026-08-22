@@ -1,4 +1,4 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v5.3 [XENO] - ЦВЕТНАЯ ПОДСВЕТКА РОЛЕЙ
+-- Murder Mystery 2 ULTIMATE SCRIPT v5.4 [XENO] - БИНДЫ + NOCLIP
 -- GUI Key: L
 -- Innocent = Зелёный, Murderer = Красный, Sheriff = Синий
 
@@ -50,15 +50,30 @@ local Settings = {
     JumpPowerValue = 50,
     Fly = false,
     FlySpeed = 50,
+    NoClip = false,         -- НОВАЯ ФУНКЦИЯ
     AntiAFK = true,
     TeamCheck = false
 }
 
+-- ====================== БИНДЫ КЛАВИШ ======================
+local Keybinds = {
+    ToggleGUI = "L",
+    ToggleAimbot = "P",
+    ToggleESP = "O",
+    ToggleFly = "K",
+    ToggleNoClip = "N",      -- НОВЫЙ БИНД
+    ToggleFullBright = "B",
+    KillAllKey = "End",
+    AutoStabKey = "Home",
+    FlyUp = "Space",
+    FlyDown = "LeftShift"
+}
+
 -- ====================== ЦВЕТА РОЛЕЙ ======================
 local ROLE_COLORS = {
-    Innocent = Color3.fromRGB(0, 255, 0),    -- Зелёный
-    Murderer = Color3.fromRGB(255, 0, 0),    -- Красный
-    Sheriff = Color3.fromRGB(0, 100, 255)    -- Синий
+    Innocent = Color3.fromRGB(0, 255, 0),
+    Murderer = Color3.fromRGB(255, 0, 0),
+    Sheriff = Color3.fromRGB(0, 100, 255)
 }
 
 -- ====================== БЕЗОПАСНЫЙ ВЫЗОВ ======================
@@ -88,10 +103,9 @@ local function CreateGUI()
         screenGui.Name = "MM2_GUI"
         screenGui.Parent = LocalPlayer.PlayerGui
         
-        -- Основное окно
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 350, 0, 500)
-        mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
+        mainFrame.Size = UDim2.new(0, 350, 0, 530)
+        mainFrame.Position = UDim2.new(0.5, -175, 0.5, -265)
         mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
         mainFrame.BorderSizePixel = 2
         mainFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
@@ -103,7 +117,7 @@ local function CreateGUI()
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 35)
         title.BackgroundTransparency = 1
-        title.Text = "⚡ MM2 ULTIMATE v5.3 ⚡"
+        title.Text = "⚡ MM2 ULTIMATE v5.4 ⚡"
         title.TextColor3 = Color3.fromRGB(0, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 18
@@ -125,17 +139,29 @@ local function CreateGUI()
             mainFrame.Visible = GUI.Visible
         end)
         
+        -- Информация о биндах
+        local bindInfo = Instance.new("TextLabel")
+        bindInfo.Size = UDim2.new(1, 0, 0, 50)
+        bindInfo.Position = UDim2.new(0, 0, 0, 38)
+        bindInfo.BackgroundTransparency = 1
+        bindInfo.Text = "L=GUI | P=Aimbot | O=ESP | K=Fly | N=NoClip | B=FullBright\nEnd=KillAll | Home=AutoStab"
+        bindInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+        bindInfo.Font = Enum.Font.Gotham
+        bindInfo.TextSize = 11
+        bindInfo.TextScaled = true
+        bindInfo.Parent = mainFrame
+        
         -- Контейнер для вкладок
         local tabContainer = Instance.new("Frame")
         tabContainer.Size = UDim2.new(1, 0, 0, 35)
-        tabContainer.Position = UDim2.new(0, 0, 0, 38)
+        tabContainer.Position = UDim2.new(0, 0, 0, 92)
         tabContainer.BackgroundTransparency = 1
         tabContainer.Parent = mainFrame
         
         -- Контейнер для содержимого
         local contentContainer = Instance.new("Frame")
-        contentContainer.Size = UDim2.new(1, 0, 1, -78)
-        contentContainer.Position = UDim2.new(0, 0, 0, 78)
+        contentContainer.Size = UDim2.new(1, 0, 1, -132)
+        contentContainer.Position = UDim2.new(0, 0, 0, 132)
         contentContainer.BackgroundTransparency = 1
         contentContainer.Parent = mainFrame
         
@@ -145,7 +171,6 @@ local function CreateGUI()
         local contentFrames = {}
         
         for i, tabName in ipairs(tabs) do
-            -- Кнопка вкладки
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(0.2, 0, 1, 0)
             btn.Position = UDim2.new(0.05 + (i-1) * 0.2, 0, 0, 0)
@@ -158,7 +183,6 @@ local function CreateGUI()
             btn.BorderColor3 = Color3.fromRGB(60, 60, 80)
             btn.Parent = tabContainer
             
-            -- Контент вкладки (ScrollingFrame)
             local content = Instance.new("ScrollingFrame")
             content.Size = UDim2.new(1, 0, 1, 0)
             content.Position = UDim2.new(0, 0, 0, 0)
@@ -309,6 +333,7 @@ local function CreateGUI()
         CreateCheckbox(miscFrame, "Walkspeed", "Walkspeed", y); y = y + 32
         CreateCheckbox(miscFrame, "Jump Power", "JumpPower", y); y = y + 32
         CreateCheckbox(miscFrame, "Fly", "Fly", y); y = y + 32
+        CreateCheckbox(miscFrame, "NoClip", "NoClip", y); y = y + 32   -- НОВАЯ ФУНКЦИЯ
         CreateCheckbox(miscFrame, "Anti AFK", "AntiAFK", y); y = y + 38
         CreateSlider(miscFrame, "Walkspeed", "WalkspeedValue", 0, 100, y); y = y + 30
         CreateSlider(miscFrame, "Jump Power", "JumpPowerValue", 0, 200, y); y = y + 30
@@ -318,7 +343,7 @@ local function CreateGUI()
         -- Кнопка KILL ALL
         local killBtn = Instance.new("TextButton")
         killBtn.Size = UDim2.new(0.4, 0, 0, 35)
-        killBtn.Position = UDim2.new(0.3, 0, 0, 455)
+        killBtn.Position = UDim2.new(0.3, 0, 0, 485)
         killBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         killBtn.Text = "💀 KILL ALL 💀"
         killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -335,7 +360,7 @@ local function CreateGUI()
         -- Обработчик клавиши L
         UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
-            if input.KeyCode == Enum.KeyCode.L then
+            if input.KeyCode == Enum.KeyCode[Keybinds.ToggleGUI] then
                 GUI.Visible = not GUI.Visible
                 mainFrame.Visible = GUI.Visible
             end
@@ -348,9 +373,8 @@ local function CreateGUI()
     end)
 end
 
--- ====================== ОСНОВНЫЕ ФУНКЦИИ (С ЦВЕТАМИ) ======================
+-- ====================== ОСНОВНЫЕ ФУНКЦИИ ======================
 
--- Функция получения цвета по роли
 local function GetRoleColor(player)
     local role = player:GetAttribute("Role") or "Innocent"
     return ROLE_COLORS[role] or ROLE_COLORS.Innocent
@@ -440,12 +464,11 @@ local function TriggerBot()
     end)
 end
 
--- ====================== ESP С ЦВЕТНОЙ ПОДСВЕТКОЙ РОЛЕЙ ======================
+-- ESP
 local ESPObjects = {}
 
 local function CreateESP()
     if not Settings.ESP then
-        -- Удаляем ESP
         for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
             if string.find(v.Name, "ESP") then
                 v:Destroy()
@@ -456,7 +479,6 @@ local function CreateESP()
     end
     
     SafeCall(function()
-        -- Удаляем старый ESP
         for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
             if string.find(v.Name, "ESP") then
                 v:Destroy()
@@ -476,11 +498,9 @@ local function CreateESP()
             local root = character:FindFirstChild("HumanoidRootPart")
             if not root then continue end
             
-            -- Получаем цвет по роли
             local color = GetRoleColor(player)
             local role = player:GetAttribute("Role") or "Innocent"
             
-            -- 1. БОКС (Box) - цвет зависит от роли
             if Settings.ESPBoxes then
                 local box = Instance.new("BoxHandleAdornment")
                 box.Size = Vector3.new(2.5, 4.5, 2.5)
@@ -492,7 +512,6 @@ local function CreateESP()
                 table.insert(ESPObjects, box)
             end
             
-            -- 2. ИМЯ + РОЛЬ
             if Settings.ESPNames then
                 local nameGui = Instance.new("BillboardGui")
                 nameGui.Adornee = root
@@ -501,7 +520,6 @@ local function CreateESP()
                 nameGui.AlwaysOnTop = true
                 nameGui.Parent = espGui
                 
-                -- Имя игрока (белое)
                 local nameLabel = Instance.new("TextLabel")
                 nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
                 nameLabel.BackgroundTransparency = 1
@@ -511,7 +529,6 @@ local function CreateESP()
                 nameLabel.Font = Enum.Font.GothamBold
                 nameLabel.Parent = nameGui
                 
-                -- Роль (цветная)
                 if Settings.ESPRoles then
                     local roleLabel = Instance.new("TextLabel")
                     roleLabel.Size = UDim2.new(1, 0, 0.5, 0)
@@ -525,7 +542,6 @@ local function CreateESP()
                 end
             end
             
-            -- 3. ТОЧКА НА ГОЛОВЕ (цветная)
             if Settings.ESPHeadDot then
                 local head = character:FindFirstChild("Head")
                 if head then
@@ -547,7 +563,6 @@ local function CreateESP()
                 end
             end
             
-            -- 4. HP БАР (зелёный → красный в зависимости от здоровья)
             if Settings.ESPHealth then
                 local healthBar = Instance.new("BillboardGui")
                 healthBar.Adornee = root
@@ -582,18 +597,79 @@ local function CreateESP()
                 end
             end
         end
+    end)
+end
+
+-- ====================== NOCLIP ======================
+local function ToggleNoClip()
+    Settings.NoClip = not Settings.NoClip
+    if Settings.NoClip then
+        print("[XENO] NoClip ON")
+    else
+        print("[XENO] NoClip OFF")
+    end
+end
+
+local function UpdateNoClip()
+    if not Settings.NoClip then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    for _, part in ipairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end
+
+-- ====================== ОБРАБОТЧИК БИНДОВ ======================
+local function SetupKeybinds()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
         
-        -- Подписываемся на изменения ролей (динамическое обновление)
-        local function UpdateESP()
-            -- Просто пересоздаём ESP при смене роли
-            CreateESP()
+        local key = input.KeyCode.Name
+        
+        -- Toggle Aimbot
+        if key == Keybinds.ToggleAimbot then
+            Settings.Aimbot = not Settings.Aimbot
+            print("[XENO] Aimbot: " .. (Settings.Aimbot and "ON" or "OFF"))
         end
         
-        -- Следим за изменением роли у всех игроков
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                player:GetAttributeChangedSignal("Role"):Connect(UpdateESP)
-            end
+        -- Toggle ESP
+        if key == Keybinds.ToggleESP then
+            Settings.ESP = not Settings.ESP
+            print("[XENO] ESP: " .. (Settings.ESP and "ON" or "OFF"))
+        end
+        
+        -- Toggle Fly
+        if key == Keybinds.ToggleFly then
+            Settings.Fly = not Settings.Fly
+            print("[XENO] Fly: " .. (Settings.Fly and "ON" or "OFF"))
+        end
+        
+        -- Toggle NoClip
+        if key == Keybinds.ToggleNoClip then
+            ToggleNoClip()
+        end
+        
+        -- Toggle FullBright
+        if key == Keybinds.ToggleFullBright then
+            Settings.FullBright = not Settings.FullBright
+            print("[XENO] FullBright: " .. (Settings.FullBright and "ON" or "OFF"))
+        end
+        
+        -- Kill All
+        if key == Keybinds.KillAllKey then
+            Settings.KillAll = true
+            KillAll()
+            Settings.KillAll = false
+            print("[XENO] Kill All executed!")
+        end
+        
+        -- AutoStab
+        if key == Keybinds.AutoStabKey then
+            Settings.AutoStab = not Settings.AutoStab
+            print("[XENO] AutoStab: " .. (Settings.AutoStab and "ON" or "OFF"))
         end
     end)
 end
@@ -611,7 +687,7 @@ local function MainLoop()
             end
         end
         
-        -- ESP (обновляем раз в 5 секунд для синхронизации цветов)
+        -- ESP
         if Settings.ESP then
             if not LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI") then
                 CreateESP()
@@ -663,7 +739,7 @@ local function MainLoop()
         cc.Saturation = Settings.Saturation
         cc.Contrast = 1.1
         
-        -- Walkspeed / JumpPower / Fly
+        -- Walkspeed / JumpPower / Fly / NoClip
         local character = LocalPlayer.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -685,12 +761,17 @@ local function MainLoop()
                         if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - Camera.CFrame.LookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - Camera.CFrame.RightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction = direction + Vector3.new(0, 1, 0) end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then direction = direction - Vector3.new(0, 1, 0) end
+                        if UserInputService:IsKeyDown(Enum.KeyCode[Keybinds.FlyUp]) then direction = direction + Vector3.new(0, 1, 0) end
+                        if UserInputService:IsKeyDown(Enum.KeyCode[Keybinds.FlyDown]) then direction = direction - Vector3.new(0, 1, 0) end
                         if direction.Magnitude > 0 then
                             root.Velocity = direction.Unit * Settings.FlySpeed
                         end
                     end
+                end
+                
+                -- NoClip
+                if Settings.NoClip then
+                    UpdateNoClip()
                 end
             end
         end
@@ -732,10 +813,13 @@ local function MainLoop()
 end
 
 -- ====================== ЗАПУСК ======================
-print("[XENO] Loading MM2 Ultimate v5.3 (Color Roles)...")
+print("[XENO] Loading MM2 Ultimate v5.4 (Keybinds + NoClip)...")
 
 -- Создание GUI
 CreateGUI()
+
+-- Настройка биндов
+SetupKeybinds()
 
 -- Запуск основного цикла
 RunService.Heartbeat:Connect(MainLoop)
@@ -753,11 +837,13 @@ end
 
 -- Уведомление
 StarterGui:SetCore("SendNotification", {
-    Title = "MM2 ULTIMATE v5.3",
-    Text = "✅ Script loaded! Press L to open/close menu\n🟢 Innocent | 🔴 Murderer | 🔵 Sheriff",
-    Duration = 5
+    Title = "MM2 ULTIMATE v5.4",
+    Text = "✅ Script loaded! Press L for GUI\nP=Aimbot | O=ESP | K=Fly | N=NoClip\nEnd=KillAll | Home=AutoStab",
+    Duration = 6
 })
 
-print("[XENO] ✅ MM2 Ultimate v5.3 loaded successfully!")
-print("[XENO] 🎮 Press L to open/close the GUI")
-print("[XENO] 🟢 Innocent = Green | 🔴 Murderer = Red | 🔵 Sheriff = Blue")
+print("[XENO] ✅ MM2 Ultimate v5.4 loaded successfully!")
+print("[XENO] 🎮 Press L to open/close GUI")
+print("[XENO] ⌨️ P=Aimbot | O=ESP | K=Fly | N=NoClip")
+print("[XENO] ⌨️ End=KillAll | Home=AutoStab")
+print("[XENO] 🟢 Innocent | 🔴 Murderer | 🔵 Sheriff")
