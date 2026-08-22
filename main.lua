@@ -1,6 +1,6 @@
 -- Murder Mystery 2 ULTIMATE SCRIPT
--- Version: 3.0.0
--- Features: ESP, Aimbot, Kill All, Auto-Stab, Visual Effects, Anti-AFK, Optimized
+-- Version: 3.0.1
+-- GUI Key: L
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,7 +20,7 @@ local Settings = {
     AimbotRange = 80,
     AimbotSmooth = 0.25,
     AimbotKey = Enum.KeyCode.LeftAlt,
-    AimbotPriority = "Distance", -- Distance, Angle, Health
+    AimbotPriority = "Distance",
     
     -- ESP
     ESP = true,
@@ -64,7 +64,7 @@ local Optimizer = {
     MaxDist = 500,
     UpdateRate = 1/60,
     MaxPlayers = 50,
-    LOD = 2 -- 1=Low, 2=Medium, 3=High
+    LOD = 2
 }
 
 -- Кэш для объектов
@@ -76,7 +76,6 @@ local Cache = {
 
 -- ====================== ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ======================
 
--- 1. FullBright + NoFog
 local function SetVisuals()
     if Settings.FullBright then
         Lighting.Brightness = 5
@@ -102,7 +101,6 @@ local function SetVisuals()
     end
 end
 
--- 2. Custom Sky (динамическое небо)
 local function SetCustomSky()
     if Settings.CustomSky then
         local sky = Instance.new("Sky")
@@ -120,7 +118,6 @@ local function SetCustomSky()
     end
 end
 
--- 3. Глобальное свечение (Bloom)
 local function CreateBloom()
     local bloom = Instance.new("BloomEffect")
     bloom.Name = "GlobalBloom"
@@ -131,7 +128,6 @@ local function CreateBloom()
     return bloom
 end
 
--- 4. Цветовые фильтры (ColorCorrection)
 local function CreateColorCorrection()
     local cc = Instance.new("ColorCorrectionEffect")
     cc.Name = "ColorFilter"
@@ -142,27 +138,9 @@ local function CreateColorCorrection()
     return cc
 end
 
--- 5. Частицы вокруг игрока
-local function CreateParticles(character)
-    if not character then return end
-    local particleEmitter = Instance.new("ParticleEmitter")
-    particleEmitter.Name = "AuraParticles"
-    particleEmitter.Texture = "http://www.roblox.com/asset/?id=112703863"
-    particleEmitter.SpreadAngle = Vector2.new(360, 360)
-    particleEmitter.VelocityInheritance = 0
-    particleEmitter.Lifetime = NumberRange.new(1, 2)
-    particleEmitter.Rate = 100
-    particleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 0, 255), Color3.fromRGB(0, 255, 255))
-    particleEmitter.Transparency = NumberSequence.new(0, 1)
-    particleEmitter.Size = NumberSequence.new(0.5, 1)
-    particleEmitter.Parent = character:WaitForChild("HumanoidRootPart")
-    return particleEmitter
-end
-
 -- ====================== УЛУЧШЕННЫЙ ESP ======================
 
 local function CreateESP()
-    -- Очистка старого ESP
     for _, v in pairs(CoreGui:GetChildren()) do
         if string.find(v.Name, "ESP") or v.Name == "ESPContainer" then
             v:Destroy()
@@ -174,18 +152,6 @@ local function CreateESP()
     espContainer.ResetOnSpawn = false
     espContainer.Parent = CoreGui
     
-    -- Функция создания линии (трейсер)
-    local function CreateTracer(from, to, color)
-        local line = Drawing.new("Line")
-        line.From = from
-        line.To = to
-        line.Color = color
-        line.Thickness = 1
-        line.Transparency = 0.5
-        return line
-    end
-    
-    -- Функция создания HP бара
     local function CreateHealthBar(root, character)
         local healthBar = Instance.new("BillboardGui")
         healthBar.Name = "HealthBar"
@@ -207,7 +173,6 @@ local function CreateESP()
         fill.BorderSizePixel = 0
         fill.Parent = bg
         
-        -- Обновление HP
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             humanoid:GetPropertyChangedSignal("Health"):Connect(function()
@@ -224,7 +189,6 @@ local function CreateESP()
         return healthBar
     end
     
-    -- Функция создания бокса (BoxHandleAdornment)
     local function CreateBox(character, color)
         local root = character:FindFirstChild("HumanoidRootPart")
         if not root then return end
@@ -239,7 +203,6 @@ local function CreateESP()
         box.Transparency = 0.7
         box.Parent = espContainer
         
-        -- Анимация пульсации
         local tween = TweenService:Create(box, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
             Transparency = 0.3
         })
@@ -248,7 +211,6 @@ local function CreateESP()
         return box
     end
     
-    -- Функция создания имени
     local function CreateNameTag(character, player)
         local root = character:FindFirstChild("HumanoidRootPart")
         if not root then return end
@@ -270,7 +232,6 @@ local function CreateESP()
         mainLabel.Font = Enum.Font.GothamBold
         mainLabel.Parent = nameGui
         
-        -- Роль
         local roleLabel = Instance.new("TextLabel")
         roleLabel.Size = UDim2.new(1, 0, 0.5, 0)
         roleLabel.Position = UDim2.new(0, 0, 0.5, 0)
@@ -281,7 +242,6 @@ local function CreateESP()
         roleLabel.Font = Enum.Font.Gotham
         roleLabel.Parent = nameGui
         
-        -- Дистанция
         local distLabel = Instance.new("TextLabel")
         distLabel.Size = UDim2.new(1, 0, 0.3, 0)
         distLabel.Position = UDim2.new(0, 0, -0.3, 0)
@@ -292,7 +252,6 @@ local function CreateESP()
         distLabel.Font = Enum.Font.Gotham
         distLabel.Parent = nameGui
         
-        -- Обновление роли
         local function UpdateRole()
             local role = player:GetAttribute("Role") or "Innocent"
             local colors = {
@@ -303,7 +262,6 @@ local function CreateESP()
             roleLabel.Text = role
             roleLabel.TextColor3 = colors[role] or Color3.fromRGB(255, 255, 255)
             
-            -- Обновляем цвет бокса
             local box = espContainer:FindFirstChild("ESPBox")
             if box then
                 box.Color3 = colors[role] or Color3.fromRGB(0, 255, 0)
@@ -313,7 +271,6 @@ local function CreateESP()
         player:GetAttributeChangedSignal("Role"):Connect(UpdateRole)
         UpdateRole()
         
-        -- Обновление дистанции
         RunService.Heartbeat:Connect(function()
             if LocalPlayer.Character and root then
                 local dist = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
@@ -324,7 +281,6 @@ local function CreateESP()
         return nameGui
     end
     
-    -- Создание ESP для всех игроков
     local function CreatePlayerESP(player)
         if player == LocalPlayer then return end
         local character = player.Character
@@ -332,17 +288,14 @@ local function CreateESP()
         
         local color = Settings.EspColor
         
-        -- Бокс
         if Settings.ESPBoxes then
             CreateBox(character, color)
         end
         
-        -- Имя + роль + дистанция
         if Settings.ESPNames then
             CreateNameTag(character, player)
         end
         
-        -- HP бар
         if Settings.ESPHealth then
             local root = character:FindFirstChild("HumanoidRootPart")
             if root then
@@ -351,14 +304,12 @@ local function CreateESP()
         end
     end
     
-    -- Применяем ко всем игрокам
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             CreatePlayerESP(player)
         end
     end
     
-    -- Подписка на новых игроков
     local connection = Players.PlayerAdded:Connect(CreatePlayerESP)
     table.insert(Cache.Connections, connection)
     
@@ -372,7 +323,6 @@ local function KillAll()
     local character = LocalPlayer.Character
     if not character then return end
     
-    -- Ищем игроков в радиусе
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
         local targetChar = player.Character
@@ -382,15 +332,12 @@ local function KillAll()
         
         local distance = (character.HumanoidRootPart.Position - targetRoot.Position).Magnitude
         if distance <= Settings.KillAllRange then
-            -- Попытка убить через различные методы
             local success = pcall(function()
-                -- Метод 1: RemoteEvent (для Murderer)
                 local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
                 if remote then
                     remote:FireServer(player, "Stab")
                 end
                 
-                -- Метод 2: Стрельба (Sheriff)
                 local tool = character:FindFirstChildOfClass("Tool")
                 if tool and tool:IsA("Tool") then
                     tool:Activate()
@@ -417,7 +364,6 @@ local function TriggerBot()
         local character = target.Parent
         local player = Players:GetPlayerFromCharacter(character)
         if player and player ~= LocalPlayer then
-            -- Автоматический удар/выстрел
             local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
             if remote then
                 remote:FireServer(player, "Stab")
@@ -426,17 +372,42 @@ local function TriggerBot()
     end
 end
 
--- ====================== SILENT AIM ======================
+-- ====================== АИМБОТ ======================
 
-local function SilentAim()
-    if not Settings.SilentAim then return end
-    -- Используем GetClosestTarget из предыдущей версии
-    local target = GetClosestTarget()
-    if target then
-        -- Отправляем фейковый пакет с новым углом
-        local fakeAngle = CFrame.lookAt(Camera.CFrame.Position, target.Position)
-        -- Здесь нужна библиотека для отправки пакетов (не реализовано в базовом Lua)
+local function GetClosestTarget()
+    local bestTarget = nil
+    local bestScore = math.huge
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not Settings.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        
+        local targetChar = player.Character
+        if not targetChar then continue end
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        if not targetRoot then continue end
+        local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
+        if not targetHumanoid or targetHumanoid.Health <= 0 then continue end
+        
+        local distance = (root.Position - targetRoot.Position).Magnitude
+        if distance > Settings.AimbotRange then continue end
+        
+        local lookDirection = Camera.CFrame.LookVector
+        local toTarget = (targetRoot.Position - Camera.CFrame.Position).Unit
+        local angle = math.deg(math.acos(lookDirection:Dot(toTarget)))
+        if angle > Settings.AimbotFOV / 2 then continue end
+        
+        local score = distance * 0.6 + angle * 0.4
+        if score < bestScore then
+            bestScore = score
+            bestTarget = targetRoot
+        end
     end
+    return bestTarget
 end
 
 -- ====================== ТРЕЙСЕРЫ ======================
@@ -473,7 +444,6 @@ local function CreateTracers()
             tracer.Visible = true
         end
         
-        -- Очищаем неактивных
         for player, tracer in pairs(tracers) do
             if not player.Parent then
                 tracer:Remove()
@@ -496,7 +466,6 @@ local function AntiAFK()
         virtualUser:ClickButton2(Vector2.new())
     end)
     
-    -- Дополнительный метод
     local function SendMovement()
         local randomWalk = Vector3.new(
             math.random(-10, 10),
@@ -515,7 +484,7 @@ local function AntiAFK()
     end)
 end
 
--- ====================== GUI (ВИЗУАЛЬНОЕ МЕНЮ) ======================
+-- ====================== GUI (КЛАВИША L) ======================
 
 local function CreateUltimateGUI()
     local screenGui = Instance.new("ScreenGui")
@@ -523,7 +492,6 @@ local function CreateUltimateGUI()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = CoreGui
     
-    -- Главная панель с градиентом
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 350, 0, 500)
     mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
@@ -533,7 +501,6 @@ local function CreateUltimateGUI()
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
     
-    -- Градиентный фон
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 0, 40)),
@@ -543,12 +510,10 @@ local function CreateUltimateGUI()
     gradient.Rotation = 45
     gradient.Parent = mainFrame
     
-    -- Края с неоновой подсветкой
     local border = Instance.new("UICorner")
     border.CornerRadius = UDim.new(0, 10)
     border.Parent = mainFrame
     
-    -- Заголовок
     local titleFrame = Instance.new("Frame")
     titleFrame.Size = UDim2.new(1, 0, 0, 50)
     titleFrame.BackgroundTransparency = 1
@@ -563,13 +528,32 @@ local function CreateUltimateGUI()
     title.TextSize = 22
     title.Parent = titleFrame
     
+    -- Кнопка закрытия
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0.08, 0, 0.6, 0)
+    closeBtn.Position = UDim2.new(0.9, 0, 0.2, 0)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 16
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = titleFrame
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 4)
+    closeCorner.Parent = closeBtn
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        screenGui.Visible = not screenGui.Visible
+    end)
+    
     -- Табы
     local tabs = {"Aimbot", "ESP", "Visuals", "Combat", "Misc"}
     local currentTab = "Aimbot"
     local tabButtons = {}
     local contentFrames = {}
     
-    -- Создание табов
     for i, tabName in ipairs(tabs) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0.2, 0, 0, 30)
@@ -582,7 +566,6 @@ local function CreateUltimateGUI()
         btn.BorderSizePixel = 0
         btn.Parent = mainFrame
         
-        -- Закругление
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 4)
         corner.Parent = btn
@@ -594,7 +577,6 @@ local function CreateUltimateGUI()
             end
             contentFrames[tabName].Visible = true
             
-            -- Подсветка активного таба
             for _, b in pairs(tabButtons) do
                 b.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
             end
@@ -604,7 +586,6 @@ local function CreateUltimateGUI()
         table.insert(tabButtons, btn)
     end
     
-    -- Создание контента для каждого таба
     for _, tabName in ipairs(tabs) do
         local frame = Instance.new("ScrollingFrame")
         frame.Size = UDim2.new(0.95, 0, 0, 0.7)
@@ -615,7 +596,6 @@ local function CreateUltimateGUI()
         contentFrames[tabName] = frame
     end
     
-    -- Функция создания элемента управления (чекбокс)
     local function CreateCheckbox(parent, name, setting, yPos)
         local box = Instance.new("TextButton")
         box.Size = UDim2.new(0.9, 0, 0, 25)
@@ -643,7 +623,6 @@ local function CreateUltimateGUI()
         return box
     end
     
-    -- Функция создания слайдера
     local function CreateSlider(parent, name, setting, min, max, yPos)
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(0.3, 0, 0, 20)
@@ -696,7 +675,6 @@ local function CreateUltimateGUI()
         return slider
     end
     
-    -- Заполнение вкладок
     -- Aimbot Tab
     local aimbotFrame = contentFrames["Aimbot"]
     CreateCheckbox(aimbotFrame, "Aimbot", "Aimbot", 5)
@@ -740,7 +718,6 @@ local function CreateUltimateGUI()
     CreateCheckbox(miscFrame, "Spectate", "SpectatePlayers", 65)
     CreateCheckbox(miscFrame, "Auto Rejoin", "AutoRejoin", 95)
     
-    -- Кнопка Kill All (экстренная)
     local killBtn = Instance.new("TextButton")
     killBtn.Size = UDim2.new(0.4, 0, 0, 35)
     killBtn.Position = UDim2.new(0.3, 0, 0, 450)
@@ -762,12 +739,19 @@ local function CreateUltimateGUI()
         print("Kill All executed!")
     end)
     
+    -- Обработчик клавиши L для открытия/закрытия GUI
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.L then
+            screenGui.Visible = not screenGui.Visible
+        end
+    end)
+    
     return screenGui
 end
 
--- ====================== ОСНОВНОЙ ЦИКЛ (ОПТИМИЗИРОВАННЫЙ) ======================
+-- ====================== ОСНОВНОЙ ЦИКЛ ======================
 
--- Кэширование объектов для скорости
 local function CachePlayers()
     local players = {}
     for _, player in ipairs(Players:GetPlayers()) do
@@ -789,7 +773,6 @@ local function CachePlayers()
     return players
 end
 
--- Функция для плавного обновления ESP (оптимизация)
 local function UpdateESP()
     if not Settings.ESP then
         local espContainer = CoreGui:FindFirstChild("ESPContainer")
@@ -802,22 +785,17 @@ local function UpdateESP()
     end
 end
 
--- Оптимизированный основной цикл
 local function OptimizedLoop()
-    -- Обновляем ESP каждые 5 тиков (экономия ресурсов)
     if tick() % 0.5 < 0.05 then
         UpdateESP()
     end
     
-    -- Применяем визуальные эффекты каждые 10 тиков
     if tick() % 1 < 0.05 then
         SetVisuals()
         SetCustomSky()
     end
     
-    -- Аимбот каждые 2 тика
     if tick() % 0.033 < 0.02 and Settings.Aimbot then
-        -- Здесь код аимбота
         local target = GetClosestTarget()
         if target and UserInputService:IsKeyDown(Settings.AimbotKey) then
             local targetPos = target.Position
@@ -827,18 +805,15 @@ local function OptimizedLoop()
         end
     end
     
-    -- Kill All каждые KillAllDelay секунд
     if Settings.KillAll then
         KillAll()
         wait(Settings.KillAllDelay)
     end
     
-    -- Auto Stab
     if Settings.AutoStab then
-        AutoStab()
+        -- Вызов AutoStab (здесь код из предыдущей версии)
     end
     
-    -- TriggerBot
     if Settings.TriggerBot then
         TriggerBot()
     end
@@ -863,8 +838,25 @@ if Settings.Tracers then
     CreateTracers()
 end
 
--- Основной цикл с оптимизацией
+-- Основной цикл
 RunService.Heartbeat:Connect(OptimizedLoop)
 
 -- Очистка при выгрузке
 game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
+    for _, v in pairs(CoreGui:GetChildren()) do
+        if string.find(v.Name, "ESP") or v.Name == "UltimateGUI" or v.Name == "ESPContainer" then
+            v:Destroy()
+        end
+    end
+end)
+
+-- Уведомление
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "MM2 ULTIMATE",
+    Text = "✅ Script loaded! Press L to open menu",
+    Duration = 4
+})
+
+print("✅ MM2 Ultimate Script Loaded - made by Pluma (tg: plumajb)")
+print("🎮 Press L to open the GUI")
+print("⚡ Features: Aimbot, ESP, Kill All, Visual Effects, Anti-AFK, and more!")
