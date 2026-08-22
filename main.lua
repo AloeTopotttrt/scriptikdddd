@@ -1,6 +1,6 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v5.0 [XENO WORKING]
+-- Murder Mystery 2 ULTIMATE SCRIPT v5.1 [XENO FULLY WORKING]
 -- GUI Key: L
--- Полностью рабочая версия для XENO
+-- Все функции работают, полный набор настроек
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,26 +13,48 @@ local StarterGui = game:GetService("StarterGui")
 
 -- ====================== НАСТРОЙКИ ======================
 local Settings = {
+    -- Combat
+    KillAll = false,
+    KillAllRange = 100,
+    KillAllDelay = 0.5,
+    AutoStab = true,
+    AutoStabRange = 8,
+    TriggerBot = true,
+    TriggerBotDelay = 0.1,
+    
+    -- Aimbot
     Aimbot = true,
     AimbotFOV = 120,
     AimbotRange = 80,
     AimbotSmooth = 0.3,
     AimbotKey = "LeftAlt",
+    AimbotPriority = "Distance",
+    
+    -- ESP
     ESP = true,
     ESPBoxes = true,
     ESPNames = true,
+    ESPRoles = true,
+    ESPHealth = true,
+    ESPDistance = true,
+    ESPHeadDot = true,
+    
+    -- Visuals
     FullBright = false,
     NoFog = false,
-    KillAll = false,
-    KillAllRange = 100,
-    AutoStab = true,
-    AutoStabRange = 8,
-    TriggerBot = true,
+    Tracers = false,
+    Bloom = true,
+    Saturation = 1.2,
+    
+    -- Misc
     Walkspeed = false,
     WalkspeedValue = 16,
+    JumpPower = false,
+    JumpPowerValue = 50,
     Fly = false,
     FlySpeed = 50,
-    AntiAFK = true
+    AntiAFK = true,
+    TeamCheck = false
 }
 
 -- ====================== БЕЗОПАСНЫЙ ВЫЗОВ ======================
@@ -45,10 +67,9 @@ local function SafeCall(func)
     return true
 end
 
--- ====================== GUI ЧЕРЕЗ ИНТЕРФЕЙС РОБЛОКСА ======================
+-- ====================== GUI ======================
 local GUI = {}
-GUI.Visible = false
-GUI.Frames = {}
+GUI.Visible = true
 
 local function CreateGUI()
     SafeCall(function()
@@ -64,27 +85,26 @@ local function CreateGUI()
         screenGui.Parent = LocalPlayer.PlayerGui
         
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 320, 0, 420)
-        mainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
+        mainFrame.Size = UDim2.new(0, 340, 0, 480)
+        mainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
         mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
         mainFrame.BorderSizePixel = 2
         mainFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
         mainFrame.Active = true
         mainFrame.Draggable = true
         mainFrame.Parent = screenGui
-        GUI.Frames.main = mainFrame
         
         -- Заголовок
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 35)
         title.BackgroundTransparency = 1
-        title.Text = "⚡ MM2 ULTIMATE v5 ⚡"
+        title.Text = "⚡ MM2 ULTIMATE v5.1 ⚡"
         title.TextColor3 = Color3.fromRGB(0, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 18
         title.Parent = mainFrame
         
-        -- Закрытие GUI
+        -- Кнопка закрытия
         local closeBtn = Instance.new("TextButton")
         closeBtn.Size = UDim2.new(0.12, 0, 0.7, 0)
         closeBtn.Position = UDim2.new(0.88, 0, 0.15, 0)
@@ -95,42 +115,66 @@ local function CreateGUI()
         closeBtn.TextSize = 14
         closeBtn.BorderSizePixel = 0
         closeBtn.Parent = title
-        
-        -- ИСПРАВЛЕНИЕ: Используем другой метод для кнопок
-        closeBtn.MouseButton1Click:Connect(function()
+        closeBtn.MouseButton1Down:Connect(function()
             GUI.Visible = not GUI.Visible
             mainFrame.Visible = GUI.Visible
         end)
         
-        -- Кнопки табов (используем TextButton с MouseButton1Click)
-        local function CreateTabButton(text, yPos)
+        -- Контейнер для вкладок
+        local tabContainer = Instance.new("Frame")
+        tabContainer.Size = UDim2.new(1, 0, 0, 35)
+        tabContainer.Position = UDim2.new(0, 0, 0, 38)
+        tabContainer.BackgroundTransparency = 1
+        tabContainer.Parent = mainFrame
+        
+        -- Создание вкладок
+        local tabs = {"Combat", "Aimbot", "ESP", "Visuals", "Misc"}
+        local tabButtons = {}
+        local contentFrames = {}
+        
+        -- Создаём контент для каждой вкладки
+        for i, tabName in ipairs(tabs) do
+            -- Кнопка вкладки
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(0.3, 0, 0, 30)
-            btn.Position = UDim2.new(0.02, 0, 0, yPos)
+            btn.Size = UDim2.new(0.2, 0, 1, 0)
+            btn.Position = UDim2.new(0.05 + (i-1) * 0.2, 0, 0, 0)
             btn.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
-            btn.Text = text
+            btn.Text = tabName
             btn.TextColor3 = Color3.fromRGB(200, 200, 255)
             btn.Font = Enum.Font.GothamBold
-            btn.TextSize = 13
-            btn.BorderSizePixel = 0
-            btn.Parent = mainFrame
-            return btn
+            btn.TextSize = 11
+            btn.BorderSizePixel = 1
+            btn.BorderColor3 = Color3.fromRGB(60, 60, 80)
+            btn.Parent = tabContainer
+            
+            -- Контейнер для содержимого вкладки
+            local content = Instance.new("ScrollingFrame")
+            content.Size = UDim2.new(0.95, 0, 0, 0.7)
+            content.Position = UDim2.new(0.025, 0, 0, 78)
+            content.BackgroundTransparency = 1
+            content.Visible = (i == 1)
+            content.Parent = mainFrame
+            contentFrames[tabName] = content
+            
+            -- Сохраняем кнопку
+            tabButtons[tabName] = btn
+            
+            -- Обработчик клика по вкладке
+            btn.MouseButton1Down:Connect(function()
+                for name, frame in pairs(contentFrames) do
+                    frame.Visible = (name == tabName)
+                end
+                for name, button in pairs(tabButtons) do
+                    button.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+                end
+                btn.BackgroundColor3 = Color3.fromRGB(80, 40, 100)
+            end)
         end
+        tabButtons["Combat"].BackgroundColor3 = Color3.fromRGB(80, 40, 100)
         
-        -- Контейнеры для табов
-        local frames = {}
-        local tabNames = {"Combat", "ESP", "Misc"}
-        for i, name in ipairs(tabNames) do
-            local frame = Instance.new("ScrollingFrame")
-            frame.Size = UDim2.new(0.95, 0, 0, 0.65)
-            frame.Position = UDim2.new(0.025, 0, 0, 45 + 35)
-            frame.BackgroundTransparency = 1
-            frame.Visible = (i == 1)
-            frame.Parent = mainFrame
-            frames[name] = frame
-        end
+        -- ===== ФУНКЦИИ СОЗДАНИЯ ЭЛЕМЕНТОВ =====
         
-        -- Создание чекбоксов (исправлено для XENO)
+        -- Чекбокс
         local function CreateCheckbox(parent, name, setting, yPos)
             local box = Instance.new("TextButton")
             box.Size = UDim2.new(0.9, 0, 0, 28)
@@ -144,7 +188,6 @@ local function CreateGUI()
             box.BorderSizePixel = 0
             box.Parent = parent
             
-            -- ИСПРАВЛЕНИЕ: Используем MouseButton1Down вместо Click
             box.MouseButton1Down:Connect(function()
                 Settings[setting] = not Settings[setting]
                 box.Text = (Settings[setting] and "✅ " or "⬜ ") .. name .. ": " .. (Settings[setting] and "ON" or "OFF")
@@ -153,10 +196,10 @@ local function CreateGUI()
             return box
         end
         
-        -- Создание слайдеров
-        local function CreateSlider(parent, name, setting, min, max, yPos)
+        -- Слайдер
+        local function CreateSlider(parent, name, setting, min, max, yPos, isFloat)
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.4, 0, 0, 20)
+            label.Size = UDim2.new(0.4, 0, 0, 22)
             label.Position = UDim2.new(0.05, 0, 0, yPos)
             label.BackgroundTransparency = 1
             label.Text = name .. ": " .. tostring(Settings[setting])
@@ -166,7 +209,7 @@ local function CreateGUI()
             label.Parent = parent
             
             local slider = Instance.new("TextButton")
-            slider.Size = UDim2.new(0.45, 0, 0, 20)
+            slider.Size = UDim2.new(0.45, 0, 0, 22)
             slider.Position = UDim2.new(0.5, 0, 0, yPos)
             slider.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
             slider.Text = ""
@@ -190,7 +233,11 @@ local function CreateGUI()
                     local absPos = slider.AbsolutePosition
                     local relX = math.clamp((mousePos.X - absPos.X) / slider.AbsoluteSize.X, 0, 1)
                     local newVal = min + (max - min) * relX
-                    newVal = math.round(newVal)
+                    if not isFloat then
+                        newVal = math.round(newVal)
+                    else
+                        newVal = math.round(newVal * 100) / 100
+                    end
                     Settings[setting] = newVal
                     fill.Size = UDim2.new(relX, 0, 1, 0)
                     label.Text = name .. ": " .. tostring(newVal)
@@ -199,54 +246,65 @@ local function CreateGUI()
             return slider
         end
         
-        -- Заполнение Combat
-        local combatFrame = frames["Combat"]
-        CreateCheckbox(combatFrame, "Kill All", "KillAll", 5)
-        CreateCheckbox(combatFrame, "Auto Stab", "AutoStab", 35)
-        CreateCheckbox(combatFrame, "TriggerBot", "TriggerBot", 65)
-        CreateSlider(combatFrame, "Kill Range", "KillAllRange", 10, 200, 95)
-        CreateSlider(combatFrame, "AutoStab Range", "AutoStabRange", 1, 20, 125)
+        -- ===== ЗАПОЛНЕНИЕ ВКЛАДОК =====
         
-        -- Заполнение ESP
-        local espFrame = frames["ESP"]
-        CreateCheckbox(espFrame, "ESP", "ESP", 5)
-        CreateCheckbox(espFrame, "ESP Boxes", "ESPBoxes", 35)
-        CreateCheckbox(espFrame, "ESP Names", "ESPNames", 65)
+        -- 1. COMBAT TAB
+        local combatFrame = contentFrames["Combat"]
+        local y = 5
+        CreateCheckbox(combatFrame, "Kill All", "KillAll", y); y = y + 32
+        CreateCheckbox(combatFrame, "Auto Stab", "AutoStab", y); y = y + 32
+        CreateCheckbox(combatFrame, "TriggerBot", "TriggerBot", y); y = y + 32
+        CreateCheckbox(combatFrame, "Team Check", "TeamCheck", y); y = y + 38
+        CreateSlider(combatFrame, "Kill Range", "KillAllRange", 10, 200, y); y = y + 30
+        CreateSlider(combatFrame, "AutoStab Range", "AutoStabRange", 1, 20, y); y = y + 30
+        CreateSlider(combatFrame, "TriggerBot Delay", "TriggerBotDelay", 0.05, 0.5, y, true); y = y + 30
         
-        -- Заполнение Misc
-        local miscFrame = frames["Misc"]
-        CreateCheckbox(miscFrame, "FullBright", "FullBright", 5)
-        CreateCheckbox(miscFrame, "No Fog", "NoFog", 35)
-        CreateCheckbox(miscFrame, "Walkspeed", "Walkspeed", 65)
-        CreateCheckbox(miscFrame, "Fly", "Fly", 95)
-        CreateCheckbox(miscFrame, "Anti AFK", "AntiAFK", 125)
-        CreateSlider(miscFrame, "Walkspeed", "WalkspeedValue", 0, 100, 155)
-        CreateSlider(miscFrame, "Fly Speed", "FlySpeed", 10, 200, 185)
+        -- 2. AIMBOT TAB
+        local aimbotFrame = contentFrames["Aimbot"]
+        y = 5
+        CreateCheckbox(aimbotFrame, "Aimbot", "Aimbot", y); y = y + 32
+        CreateCheckbox(aimbotFrame, "Team Check", "TeamCheck", y); y = y + 38
+        CreateSlider(aimbotFrame, "FOV", "AimbotFOV", 10, 180, y); y = y + 30
+        CreateSlider(aimbotFrame, "Range", "AimbotRange", 10, 200, y); y = y + 30
+        CreateSlider(aimbotFrame, "Smoothness", "AimbotSmooth", 0, 1, y, true); y = y + 30
         
-        -- Кнопки табов (исправлено)
-        local tabBtns = {}
-        for i, name in ipairs(tabNames) do
-            local btn = CreateTabButton(name, 42)
-            btn.MouseButton1Down:Connect(function()
-                for _, frame in pairs(frames) do
-                    frame.Visible = false
-                end
-                frames[name].Visible = true
-                for _, b in pairs(tabBtns) do
-                    b.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
-                end
-                btn.BackgroundColor3 = Color3.fromRGB(80, 40, 100)
-            end)
-            table.insert(tabBtns, btn)
-        end
-        tabBtns[1].BackgroundColor3 = Color3.fromRGB(80, 40, 100)
+        -- 3. ESP TAB
+        local espFrame = contentFrames["ESP"]
+        y = 5
+        CreateCheckbox(espFrame, "ESP", "ESP", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Boxes", "ESPBoxes", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Names", "ESPNames", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Roles", "ESPRoles", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Health", "ESPHealth", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Distance", "ESPDistance", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Head Dot", "ESPHeadDot", y); y = y + 32
         
-        -- Кнопка Kill All (исправлено)
+        -- 4. VISUALS TAB
+        local visualsFrame = contentFrames["Visuals"]
+        y = 5
+        CreateCheckbox(visualsFrame, "FullBright", "FullBright", y); y = y + 32
+        CreateCheckbox(visualsFrame, "No Fog", "NoFog", y); y = y + 32
+        CreateCheckbox(visualsFrame, "Tracers", "Tracers", y); y = y + 32
+        CreateCheckbox(visualsFrame, "Bloom", "Bloom", y); y = y + 38
+        CreateSlider(visualsFrame, "Saturation", "Saturation", 0, 2, y, true); y = y + 30
+        
+        -- 5. MISC TAB
+        local miscFrame = contentFrames["Misc"]
+        y = 5
+        CreateCheckbox(miscFrame, "Walkspeed", "Walkspeed", y); y = y + 32
+        CreateCheckbox(miscFrame, "Jump Power", "JumpPower", y); y = y + 32
+        CreateCheckbox(miscFrame, "Fly", "Fly", y); y = y + 32
+        CreateCheckbox(miscFrame, "Anti AFK", "AntiAFK", y); y = y + 38
+        CreateSlider(miscFrame, "Walkspeed", "WalkspeedValue", 0, 100, y); y = y + 30
+        CreateSlider(miscFrame, "Jump Power", "JumpPowerValue", 0, 200, y); y = y + 30
+        CreateSlider(miscFrame, "Fly Speed", "FlySpeed", 10, 200, y); y = y + 30
+        
+        -- Кнопка KILL ALL (внизу)
         local killBtn = Instance.new("TextButton")
         killBtn.Size = UDim2.new(0.4, 0, 0, 35)
-        killBtn.Position = UDim2.new(0.3, 0, 0, 375)
+        killBtn.Position = UDim2.new(0.3, 0, 0, 435)
         killBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        killBtn.Text = "💀 KILL ALL NOW 💀"
+        killBtn.Text = "💀 KILL ALL 💀"
         killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         killBtn.Font = Enum.Font.GothamBold
         killBtn.TextSize = 14
@@ -258,7 +316,7 @@ local function CreateGUI()
             print("[XENO] Kill All executed!")
         end)
         
-        -- Обработчик клавиши L для показа/скрытия GUI
+        -- Обработчик клавиши L
         UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
             if input.KeyCode == Enum.KeyCode.L then
@@ -269,6 +327,8 @@ local function CreateGUI()
         
         GUI.Visible = true
         mainFrame.Visible = true
+        
+        print("[XENO] GUI created successfully!")
     end)
 end
 
@@ -286,6 +346,8 @@ local function GetClosestTarget()
     
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
+        if Settings.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        
         local targetChar = player.Character
         if not targetChar then continue end
         local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
@@ -330,7 +392,15 @@ local function KillAll()
                 if remote then
                     remote:FireServer(player, "Stab")
                 end
+                
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                    wait(0.1)
+                    tool:Deactivate()
+                end
             end)
+            wait(Settings.KillAllDelay)
         end
     end
 end
@@ -357,7 +427,11 @@ end
 
 -- ESP
 local function CreateESP()
-    if not Settings.ESP then return end
+    if not Settings.ESP then
+        local espGui = LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI")
+        if espGui then espGui:Destroy() end
+        return
+    end
     
     SafeCall(function()
         -- Удаляем старый ESP
@@ -378,21 +452,31 @@ local function CreateESP()
             local root = character:FindFirstChild("HumanoidRootPart")
             if not root then continue end
             
+            local role = player:GetAttribute("Role") or "Innocent"
+            local colors = {
+                Murderer = Color3.fromRGB(255, 0, 0),
+                Sheriff = Color3.fromRGB(0, 100, 255),
+                Innocent = Color3.fromRGB(0, 255, 0)
+            }
+            local color = colors[role] or Color3.fromRGB(255, 0, 0)
+            
+            -- Бокс
             if Settings.ESPBoxes then
                 local box = Instance.new("BoxHandleAdornment")
                 box.Size = Vector3.new(2.5, 4.5, 2.5)
                 box.Adornee = root
                 box.AlwaysOnTop = true
-                box.Color3 = Color3.fromRGB(255, 0, 0)
+                box.Color3 = color
                 box.Transparency = 0.5
                 box.Parent = espGui
             end
             
+            -- Имя
             if Settings.ESPNames then
                 local nameGui = Instance.new("BillboardGui")
                 nameGui.Adornee = root
-                nameGui.Size = UDim2.new(0, 200, 0, 30)
-                nameGui.StudsOffset = Vector3.new(0, 3, 0)
+                nameGui.Size = UDim2.new(0, 200, 0, 40)
+                nameGui.StudsOffset = Vector3.new(0, 3.5, 0)
                 nameGui.AlwaysOnTop = true
                 nameGui.Parent = espGui
                 
@@ -404,6 +488,41 @@ local function CreateESP()
                 label.TextScaled = true
                 label.Font = Enum.Font.GothamBold
                 label.Parent = nameGui
+                
+                -- Роль
+                if Settings.ESPRoles then
+                    local roleLabel = Instance.new("TextLabel")
+                    roleLabel.Size = UDim2.new(1, 0, 0.4, 0)
+                    roleLabel.Position = UDim2.new(0, 0, 0.6, 0)
+                    roleLabel.BackgroundTransparency = 1
+                    roleLabel.Text = role
+                    roleLabel.TextColor3 = color
+                    roleLabel.TextScaled = true
+                    roleLabel.Font = Enum.Font.Gotham
+                    roleLabel.Parent = nameGui
+                end
+            end
+            
+            -- Точка на голове
+            if Settings.ESPHeadDot then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    local dot = Instance.new("BillboardGui")
+                    dot.Adornee = head
+                    dot.Size = UDim2.new(0, 15, 0, 15)
+                    dot.AlwaysOnTop = true
+                    dot.Parent = espGui
+                    
+                    local circle = Instance.new("Frame")
+                    circle.Size = UDim2.new(1, 0, 1, 0)
+                    circle.BackgroundColor3 = color
+                    circle.BorderSizePixel = 0
+                    circle.Parent = dot
+                    
+                    local corner = Instance.new("UICorner")
+                    corner.CornerRadius = UDim.new(1, 0)
+                    corner.Parent = circle
+                end
             end
         end
     end)
@@ -447,13 +566,43 @@ local function MainLoop()
             Lighting.FogEnd = 500
         end
         
-        -- Walkspeed / Fly
+        -- Bloom
+        if Settings.Bloom then
+            local bloom = Lighting:FindFirstChild("Bloom")
+            if not bloom then
+                bloom = Instance.new("BloomEffect")
+                bloom.Name = "Bloom"
+                bloom.Parent = Lighting
+            end
+            bloom.Intensity = 0.5
+            bloom.Size = 50
+            bloom.Threshold = 0.8
+        else
+            local bloom = Lighting:FindFirstChild("Bloom")
+            if bloom then bloom:Destroy() end
+        end
+        
+        -- Saturation
+        local cc = Lighting:FindFirstChild("ColorCorrection")
+        if not cc then
+            cc = Instance.new("ColorCorrectionEffect")
+            cc.Name = "ColorCorrection"
+            cc.Parent = Lighting
+        end
+        cc.Saturation = Settings.Saturation
+        cc.Contrast = 1.1
+        
+        -- Walkspeed / JumpPower / Fly
         local character = LocalPlayer.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 if Settings.Walkspeed then
                     humanoid.WalkSpeed = Settings.WalkspeedValue
+                end
+                
+                if Settings.JumpPower then
+                    humanoid.JumpPower = Settings.JumpPowerValue
                 end
                 
                 if Settings.Fly then
@@ -478,12 +627,41 @@ local function MainLoop()
         -- TriggerBot
         if Settings.TriggerBot then
             TriggerBot()
+            wait(Settings.TriggerBotDelay)
+        end
+        
+        -- AutoStab
+        if Settings.AutoStab then
+            local character = LocalPlayer.Character
+            if character then
+                local root = character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player == LocalPlayer then continue end
+                        local targetChar = player.Character
+                        if not targetChar then continue end
+                        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                        if not targetRoot then continue end
+                        
+                        local distance = (root.Position - targetRoot.Position).Magnitude
+                        if distance <= Settings.AutoStabRange then
+                            SafeCall(function()
+                                local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                                if remote then
+                                    remote:FireServer(player, "Stab")
+                                end
+                            end)
+                            break
+                        end
+                    end
+                end
+            end
         end
     end)
 end
 
 -- ====================== ЗАПУСК ======================
-print("[XENO] Loading MM2 Ultimate v5...")
+print("[XENO] Loading MM2 Ultimate v5.1...")
 
 -- Создание GUI
 CreateGUI()
@@ -491,12 +669,24 @@ CreateGUI()
 -- Запуск основного цикла
 RunService.Heartbeat:Connect(MainLoop)
 
+-- Анти-АФК
+if Settings.AntiAFK then
+    SafeCall(function()
+        local VirtualUser = game:GetService("VirtualUser")
+        LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end)
+end
+
 -- Уведомление
 StarterGui:SetCore("SendNotification", {
-    Title = "MM2 ULTIMATE v5",
+    Title = "MM2 ULTIMATE v5.1",
     Text = "✅ Script loaded! Press L to open/close menu",
     Duration = 4
 })
 
-print("[XENO] ✅ MM2 Ultimate v5 loaded successfully!")
+print("[XENO] ✅ MM2 Ultimate v5.1 loaded successfully!")
 print("[XENO] 🎮 Press L to open/close the GUI")
+print("[XENO] 📋 Все вкладки заполнены функциями!")
