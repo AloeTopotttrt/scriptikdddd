@@ -1,11 +1,10 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v6.0 [XENO WORKING]
--- Простая и стабильная версия
+-- Murder Mystery 2 ULTIMATE SCRIPT v6.1 [XENO WORKING]
+-- Fly = E | NoClip = F | Menu = L
 
-print("[XENO] Загрузка MM2 Ultimate...")
+print("[XENO] Загрузка MM2 Ultimate v6.1...")
 
--- ====================== ОСНОВНЫЕ НАСТРОЙКИ ======================
+-- ====================== НАСТРОЙКИ ======================
 local Settings = {
-    -- Режимы
     Aimbot = true,
     ESP = true,
     KillAll = false,
@@ -16,20 +15,17 @@ local Settings = {
     FullBright = false,
     NoFog = false,
     
-    -- Параметры
     AimbotFOV = 120,
     AimbotRange = 80,
     AimbotSmooth = 0.3,
     KillAllRange = 100,
     AutoStabRange = 8,
-    WalkspeedValue = 16,
     FlySpeed = 50,
     
-    -- Клавиши
     AimbotKey = "LeftAlt",
     ToggleMenu = "L",
-    ToggleFly = "K",
-    ToggleNoClip = "N",
+    ToggleFly = "E",        -- НОВЫЙ БИНД
+    ToggleNoClip = "F",     -- НОВЫЙ БИНД
     KillAllKey = "End"
 }
 
@@ -44,13 +40,51 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 
--- ====================== ФУНКЦИИ БЕЗОПАСНОСТИ ======================
+-- ====================== БЕЗОПАСНЫЙ ВЫЗОВ ======================
 local function SafeCall(func)
     local success, err = pcall(func)
     if not success then
         warn("[XENO] Ошибка: " .. tostring(err))
     end
     return success
+end
+
+-- ====================== ПОЛУЧЕНИЕ РОЛИ (ИСПРАВЛЕНО) ======================
+local function GetPlayerRole(player)
+    -- Проверяем несколько возможных мест хранения роли
+    local role = "Innocent"
+    
+    -- Способ 1: Атрибуты (самый частый)
+    if player:GetAttribute("Role") then
+        role = player:GetAttribute("Role")
+    -- Способ 2: Данные игрока
+    elseif player:FindFirstChild("Data") and player.Data:FindFirstChild("Role") then
+        role = player.Data.Role.Value
+    -- Способ 3: Статус (для старых версий)
+    elseif player:FindFirstChild("Status") and player.Status:FindFirstChild("Role") then
+        role = player.Status.Role.Value
+    -- Способ 4: Проверка по оружию (если у игрока есть нож — убийца)
+    elseif player.Character and player.Character:FindFirstChildOfClass("Tool") then
+        local tool = player.Character:FindFirstChildOfClass("Tool")
+        if tool and (tool.Name:lower():find("knife") or tool.Name:lower():find("dagger")) then
+            role = "Murderer"
+        elseif tool and tool.Name:lower():find("gun") then
+            role = "Sheriff"
+        end
+    end
+    
+    return role
+end
+
+-- ====================== ЦВЕТА РОЛЕЙ ======================
+local function GetRoleColor(role)
+    if role == "Murderer" then
+        return Color3.fromRGB(255, 0, 0)    -- Красный
+    elseif role == "Sheriff" then
+        return Color3.fromRGB(0, 100, 255)  -- Синий
+    else
+        return Color3.fromRGB(0, 255, 0)    -- Зелёный (Innocent)
+    end
 end
 
 -- ====================== АИМБОТ ======================
@@ -116,7 +150,7 @@ local function KillAll()
     end
 end
 
--- ====================== ESP ======================
+-- ====================== ESP (ИСПРАВЛЕН) ======================
 local function CreateESP()
     if not Settings.ESP then
         for _, v in pairs(CoreGui:GetChildren()) do
@@ -128,6 +162,7 @@ local function CreateESP()
     end
     
     SafeCall(function()
+        -- Удаляем старый ESP
         for _, v in pairs(CoreGui:GetChildren()) do
             if string.find(v.Name, "ESP") then
                 v:Destroy()
@@ -147,11 +182,9 @@ local function CreateESP()
             local root = character:FindFirstChild("HumanoidRootPart")
             if not root then continue end
             
-            -- Цвет по роли
-            local role = player:GetAttribute("Role") or "Innocent"
-            local color = Color3.fromRGB(0, 255, 0) -- Innocent = зелёный
-            if role == "Murderer" then color = Color3.fromRGB(255, 0, 0) end
-            if role == "Sheriff" then color = Color3.fromRGB(0, 100, 255) end
+            -- ПОЛУЧАЕМ РОЛЬ (ИСПРАВЛЕНО)
+            local role = GetPlayerRole(player)
+            local color = GetRoleColor(role)
             
             -- Бокс
             local box = Instance.new("BoxHandleAdornment")
@@ -162,22 +195,54 @@ local function CreateESP()
             box.Transparency = 0.5
             box.Parent = espGui
             
-            -- Имя
+            -- Имя + Роль
             local nameGui = Instance.new("BillboardGui")
             nameGui.Adornee = root
-            nameGui.Size = UDim2.new(0, 200, 0, 40)
-            nameGui.StudsOffset = Vector3.new(0, 3, 0)
+            nameGui.Size = UDim2.new(0, 220, 0, 50)
+            nameGui.StudsOffset = Vector3.new(0, 3.5, 0)
             nameGui.AlwaysOnTop = true
             nameGui.Parent = espGui
             
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.BackgroundTransparency = 1
-            label.Text = player.Name .. " [" .. role .. "]"
-            label.TextColor3 = color
-            label.TextScaled = true
-            label.Font = Enum.Font.GothamBold
-            label.Parent = nameGui
+            -- Имя игрока (белое)
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = player.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextScaled = true
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.Parent = nameGui
+            
+            -- Роль (цветная)
+            local roleLabel = Instance.new("TextLabel")
+            roleLabel.Size = UDim2.new(1, 0, 0.5, 0)
+            roleLabel.Position = UDim2.new(0, 0, 0.5, 0)
+            roleLabel.BackgroundTransparency = 1
+            roleLabel.Text = role
+            roleLabel.TextColor3 = color
+            roleLabel.TextScaled = true
+            roleLabel.Font = Enum.Font.GothamBold
+            roleLabel.Parent = nameGui
+            
+            -- Точка на голове
+            local head = character:FindFirstChild("Head")
+            if head then
+                local dot = Instance.new("BillboardGui")
+                dot.Adornee = head
+                dot.Size = UDim2.new(0, 12, 0, 12)
+                dot.AlwaysOnTop = true
+                dot.Parent = espGui
+                
+                local circle = Instance.new("Frame")
+                circle.Size = UDim2.new(1, 0, 1, 0)
+                circle.BackgroundColor3 = color
+                circle.BorderSizePixel = 0
+                circle.Parent = dot
+                
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(1, 0)
+                corner.Parent = circle
+            end
         end
     end)
 end
@@ -197,8 +262,8 @@ local function CreateMenu()
         screenGui.Parent = CoreGui
         
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(0, 250, 0, 350)
-        frame.Position = UDim2.new(0.5, -125, 0.5, -175)
+        frame.Size = UDim2.new(0, 280, 0, 380)
+        frame.Position = UDim2.new(0.5, -140, 0.5, -190)
         frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
         frame.BackgroundTransparency = 0.1
         frame.BorderSizePixel = 2
@@ -207,38 +272,35 @@ local function CreateMenu()
         frame.Draggable = true
         frame.Parent = screenGui
         
-        -- Заголовок
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 30)
         title.BackgroundTransparency = 1
-        title.Text = "⚡ MM2 ULTIMATE ⚡"
+        title.Text = "⚡ MM2 ULTIMATE v6.1 ⚡"
         title.TextColor3 = Color3.fromRGB(0, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 18
         title.Parent = frame
         
-        -- Бинды
         local bindInfo = Instance.new("TextLabel")
-        bindInfo.Size = UDim2.new(1, 0, 0, 40)
+        bindInfo.Size = UDim2.new(1, 0, 0, 50)
         bindInfo.Position = UDim2.new(0, 0, 0, 32)
         bindInfo.BackgroundTransparency = 1
-        bindInfo.Text = "L=Menu | K=Fly | N=NoClip | End=KillAll"
+        bindInfo.Text = "L=Menu | E=Fly | F=NoClip | End=KillAll"
         bindInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
         bindInfo.Font = Enum.Font.Gotham
-        bindInfo.TextSize = 11
+        bindInfo.TextSize = 12
         bindInfo.TextScaled = true
         bindInfo.Parent = frame
         
-        -- Функция создания чекбокса
         local function CreateCheckbox(text, setting, yPos)
             local box = Instance.new("TextButton")
-            box.Size = UDim2.new(0.9, 0, 0, 25)
+            box.Size = UDim2.new(0.9, 0, 0, 26)
             box.Position = UDim2.new(0.05, 0, 0, yPos)
             box.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
             box.Text = "⬜ " .. text .. ": OFF"
             box.TextColor3 = Color3.fromRGB(200, 200, 200)
             box.Font = Enum.Font.Gotham
-            box.TextSize = 12
+            box.TextSize = 13
             box.TextXAlignment = Enum.TextXAlignment.Left
             box.BorderSizePixel = 0
             box.Parent = frame
@@ -251,19 +313,18 @@ local function CreateMenu()
             return box
         end
         
-        -- Чекбоксы
-        CreateCheckbox("Aimbot", "Aimbot", 75)
-        CreateCheckbox("ESP", "ESP", 105)
-        CreateCheckbox("AutoStab", "AutoStab", 135)
-        CreateCheckbox("TriggerBot", "TriggerBot", 165)
-        CreateCheckbox("Fly", "Fly", 195)
-        CreateCheckbox("NoClip", "NoClip", 225)
-        CreateCheckbox("FullBright", "FullBright", 255)
+        CreateCheckbox("Aimbot", "Aimbot", 85)
+        CreateCheckbox("ESP", "ESP", 115)
+        CreateCheckbox("AutoStab", "AutoStab", 145)
+        CreateCheckbox("TriggerBot", "TriggerBot", 175)
+        CreateCheckbox("Fly", "Fly", 205)
+        CreateCheckbox("NoClip", "NoClip", 235)
+        CreateCheckbox("FullBright", "FullBright", 265)
+        CreateCheckbox("No Fog", "NoFog", 295)
         
-        -- Кнопка Kill All
         local killBtn = Instance.new("TextButton")
-        killBtn.Size = UDim2.new(0.6, 0, 0, 30)
-        killBtn.Position = UDim2.new(0.2, 0, 0, 290)
+        killBtn.Size = UDim2.new(0.6, 0, 0, 32)
+        killBtn.Position = UDim2.new(0.2, 0, 0, 330)
         killBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         killBtn.Text = "💀 KILL ALL"
         killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -294,8 +355,8 @@ local function MainLoop()
             end
         end
         
-        -- ESP (обновляем раз в секунду)
-        if tick() % 1 < 0.05 then
+        -- ESP (обновляем раз в 0.5 секунды)
+        if tick() % 0.5 < 0.05 then
             if Settings.ESP then
                 if not CoreGui:FindFirstChild("ESP_GUI") then
                     CreateESP()
@@ -306,7 +367,7 @@ local function MainLoop()
             end
         end
         
-        -- FullBright
+        -- Visuals
         if Settings.FullBright then
             Lighting.Brightness = 5
             Lighting.Ambient = Color3.fromRGB(255, 255, 255)
@@ -315,18 +376,18 @@ local function MainLoop()
             Lighting.Ambient = Color3.fromRGB(100, 100, 100)
         end
         
-        -- NoFog
         if Settings.NoFog then
             Lighting.FogEnd = 1000
         else
             Lighting.FogEnd = 500
         end
         
-        -- Fly
+        -- Fly + NoClip
         local character = LocalPlayer.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid then
+                -- Fly
                 if Settings.Fly then
                     humanoid.PlatformStand = true
                     local root = character:FindFirstChild("HumanoidRootPart")
@@ -342,20 +403,14 @@ local function MainLoop()
                             root.Velocity = direction.Unit * Settings.FlySpeed
                         end
                     end
+                else
+                    humanoid.PlatformStand = false
                 end
                 
                 -- NoClip
-                if Settings.NoClip then
-                    for _, part in ipairs(character:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                else
-                    for _, part in ipairs(character:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = true
-                        end
+                for _, part in ipairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = not Settings.NoClip
                     end
                 end
             end
@@ -411,11 +466,12 @@ local function MainLoop()
     end)
 end
 
--- ====================== ОБРАБОТЧИК КЛАВИШ ======================
+-- ====================== ОБРАБОТЧИК КЛАВИШ (НОВЫЕ БИНДЫ) ======================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     local key = input.KeyCode.Name
     
+    -- Menu
     if key == Settings.ToggleMenu then
         local menu = CoreGui:FindFirstChild("MM2_Menu")
         if menu then
@@ -423,6 +479,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
     
+    -- Fly (E)
     if key == Settings.ToggleFly then
         Settings.Fly = not Settings.Fly
         print("[XENO] Fly: " .. (Settings.Fly and "ON" or "OFF"))
@@ -435,11 +492,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
     
+    -- NoClip (F)
     if key == Settings.ToggleNoClip then
         Settings.NoClip = not Settings.NoClip
         print("[XENO] NoClip: " .. (Settings.NoClip and "ON" or "OFF"))
     end
     
+    -- Kill All (End)
     if key == Settings.KillAllKey then
         Settings.KillAll = true
         KillAll()
@@ -449,7 +508,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- ====================== ЗАПУСК ======================
-print("[XENO] Запуск MM2 Ultimate...")
+print("[XENO] Запуск MM2 Ultimate v6.1...")
 
 -- Создание меню
 CreateMenu()
@@ -459,11 +518,11 @@ RunService.Heartbeat:Connect(MainLoop)
 
 -- Уведомление
 StarterGui:SetCore("SendNotification", {
-    Title = "MM2 ULTIMATE v6.0",
-    Text = "✅ Скрипт загружен! Нажми L для меню",
-    Duration = 4
+    Title = "MM2 ULTIMATE v6.1",
+    Text = "✅ Скрипт загружен!\nL=Menu | E=Fly | F=NoClip | End=KillAll",
+    Duration = 5
 })
 
-print("[XENO] ✅ MM2 Ultimate v6.0 загружен!")
-print("[XENO] 🎮 Нажми L для открытия меню")
-print("[XENO] ⌨️ K - Fly | N - NoClip | End - Kill All")
+print("[XENO] ✅ MM2 Ultimate v6.1 загружен!")
+print("[XENO] 🎮 L - Menu | E - Fly | F - NoClip | End - Kill All")
+print("[XENO] 🎯 Роли отображаются корректно!")
