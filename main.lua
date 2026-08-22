@@ -1,6 +1,6 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v5.4 [XENO] - БИНДЫ + NOCLIP
+-- Murder Mystery 2 ULTIMATE SCRIPT v5.5 [XENO] - ИСПРАВЛЕННЫЕ ВЫКЛЮЧЕНИЯ + GUN ESP
 -- GUI Key: L
--- Innocent = Зелёный, Murderer = Красный, Sheriff = Синий
+-- Innocent = Зелёный, Murderer = Красный, Sheriff = Синий, Gun = Жёлтый
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,6 +10,7 @@ local Camera = workspace.CurrentCamera
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local Workspace = game:GetService("Workspace")
 
 -- ====================== НАСТРОЙКИ ======================
 local Settings = {
@@ -36,6 +37,7 @@ local Settings = {
     ESPRoles = true,
     ESPHealth = true,
     ESPHeadDot = true,
+    ESPGun = true,           -- НОВАЯ ФУНКЦИЯ
     
     -- Visuals
     FullBright = false,
@@ -50,7 +52,7 @@ local Settings = {
     JumpPowerValue = 50,
     Fly = false,
     FlySpeed = 50,
-    NoClip = false,         -- НОВАЯ ФУНКЦИЯ
+    NoClip = false,
     AntiAFK = true,
     TeamCheck = false
 }
@@ -61,20 +63,22 @@ local Keybinds = {
     ToggleAimbot = "P",
     ToggleESP = "O",
     ToggleFly = "K",
-    ToggleNoClip = "N",      -- НОВЫЙ БИНД
+    ToggleNoClip = "N",
     ToggleFullBright = "B",
     KillAllKey = "End",
     AutoStabKey = "Home",
+    ToggleGunESP = "G",      -- НОВЫЙ БИНД
     FlyUp = "Space",
     FlyDown = "LeftShift"
 }
 
--- ====================== ЦВЕТА РОЛЕЙ ======================
+-- ====================== ЦВЕТА ======================
 local ROLE_COLORS = {
     Innocent = Color3.fromRGB(0, 255, 0),
     Murderer = Color3.fromRGB(255, 0, 0),
     Sheriff = Color3.fromRGB(0, 100, 255)
 }
+local GUN_COLOR = Color3.fromRGB(255, 255, 0) -- Жёлтый для пистолетов
 
 -- ====================== БЕЗОПАСНЫЙ ВЫЗОВ ======================
 local function SafeCall(func)
@@ -84,6 +88,43 @@ local function SafeCall(func)
         return nil
     end
     return true
+end
+
+-- ====================== ХРАНИЛИЩЕ ОБЪЕКТОВ ======================
+local Objects = {
+    ESP = {},
+    GunESP = {},
+    GUI = nil
+}
+
+-- ====================== ФУНКЦИЯ ОЧИСТКИ ======================
+local function ClearESP()
+    -- Удаляем ESP объекты
+    for _, obj in ipairs(Objects.ESP) do
+        SafeCall(function()
+            if obj and obj.Parent then
+                obj:Destroy()
+            end
+        end)
+    end
+    Objects.ESP = {}
+    
+    -- Удаляем GUI ESP
+    for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
+        if string.find(v.Name, "ESP") then
+            SafeCall(function() v:Destroy() end)
+        end
+    end
+    
+    -- Удаляем Gun ESP
+    for _, obj in ipairs(Objects.GunESP) do
+        SafeCall(function()
+            if obj and obj.Parent then
+                obj:Destroy()
+            end
+        end)
+    end
+    Objects.GunESP = {}
 end
 
 -- ====================== СОЗДАНИЕ GUI ======================
@@ -102,6 +143,7 @@ local function CreateGUI()
         local screenGui = Instance.new("ScreenGui")
         screenGui.Name = "MM2_GUI"
         screenGui.Parent = LocalPlayer.PlayerGui
+        Objects.GUI = screenGui
         
         local mainFrame = Instance.new("Frame")
         mainFrame.Size = UDim2.new(0, 350, 0, 530)
@@ -113,17 +155,15 @@ local function CreateGUI()
         mainFrame.Draggable = true
         mainFrame.Parent = screenGui
         
-        -- Заголовок
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 35)
         title.BackgroundTransparency = 1
-        title.Text = "⚡ MM2 ULTIMATE v5.4 ⚡"
+        title.Text = "⚡ MM2 ULTIMATE v5.5 ⚡"
         title.TextColor3 = Color3.fromRGB(0, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 18
         title.Parent = mainFrame
         
-        -- Кнопка закрытия
         local closeBtn = Instance.new("TextButton")
         closeBtn.Size = UDim2.new(0.12, 0, 0.7, 0)
         closeBtn.Position = UDim2.new(0.88, 0, 0.15, 0)
@@ -139,33 +179,29 @@ local function CreateGUI()
             mainFrame.Visible = GUI.Visible
         end)
         
-        -- Информация о биндах
         local bindInfo = Instance.new("TextLabel")
         bindInfo.Size = UDim2.new(1, 0, 0, 50)
         bindInfo.Position = UDim2.new(0, 0, 0, 38)
         bindInfo.BackgroundTransparency = 1
-        bindInfo.Text = "L=GUI | P=Aimbot | O=ESP | K=Fly | N=NoClip | B=FullBright\nEnd=KillAll | Home=AutoStab"
+        bindInfo.Text = "L=GUI | P=Aimbot | O=ESP | K=Fly | N=NoClip | G=GunESP\nB=FullBright | End=KillAll | Home=AutoStab"
         bindInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
         bindInfo.Font = Enum.Font.Gotham
         bindInfo.TextSize = 11
         bindInfo.TextScaled = true
         bindInfo.Parent = mainFrame
         
-        -- Контейнер для вкладок
         local tabContainer = Instance.new("Frame")
         tabContainer.Size = UDim2.new(1, 0, 0, 35)
         tabContainer.Position = UDim2.new(0, 0, 0, 92)
         tabContainer.BackgroundTransparency = 1
         tabContainer.Parent = mainFrame
         
-        -- Контейнер для содержимого
         local contentContainer = Instance.new("Frame")
         contentContainer.Size = UDim2.new(1, 0, 1, -132)
         contentContainer.Position = UDim2.new(0, 0, 0, 132)
         contentContainer.BackgroundTransparency = 1
         contentContainer.Parent = mainFrame
         
-        -- Вкладки
         local tabs = {"Combat", "Aimbot", "ESP", "Visuals", "Misc"}
         local tabButtons = {}
         local contentFrames = {}
@@ -208,7 +244,6 @@ local function CreateGUI()
         end
         tabButtons["Combat"].BackgroundColor3 = Color3.fromRGB(80, 40, 100)
         
-        -- Функции создания элементов
         local function CreateCheckbox(parent, name, setting, yPos)
             local box = Instance.new("TextButton")
             box.Size = UDim2.new(0.9, 0, 0, 28)
@@ -226,6 +261,39 @@ local function CreateGUI()
                 Settings[setting] = not Settings[setting]
                 box.Text = (Settings[setting] and "✅ " or "⬜ ") .. name .. ": " .. (Settings[setting] and "ON" or "OFF")
                 box.TextColor3 = Settings[setting] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 200, 200)
+                -- При выключении очищаем соответствующие объекты
+                if setting == "ESP" and not Settings.ESP then
+                    ClearESP()
+                end
+                if setting == "ESPGun" and not Settings.ESPGun then
+                    ClearGunESP()
+                end
+                if setting == "FullBright" and not Settings.FullBright then
+                    Lighting.Brightness = 1
+                    Lighting.Ambient = Color3.fromRGB(100, 100, 100)
+                end
+                if setting == "NoFog" and not Settings.NoFog then
+                    Lighting.FogEnd = 500
+                end
+                if setting == "Fly" and not Settings.Fly then
+                    local char = LocalPlayer.Character
+                    if char then
+                        local humanoid = char:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            humanoid.PlatformStand = false
+                        end
+                    end
+                end
+                if setting == "NoClip" and not Settings.NoClip then
+                    local char = LocalPlayer.Character
+                    if char then
+                        for _, part in ipairs(char:GetChildren()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = true
+                            end
+                        end
+                    end
+                end
             end)
             
             parent.CanvasSize = UDim2.new(0, 0, 0, yPos + 40)
@@ -283,9 +351,7 @@ local function CreateGUI()
             return slider
         end
         
-        -- ===== ЗАПОЛНЕНИЕ ВКЛАДОК =====
-        
-        -- 1. COMBAT TAB
+        -- Заполнение вкладок
         local combatFrame = contentFrames["Combat"]
         local y = 5
         CreateCheckbox(combatFrame, "Kill All", "KillAll", y); y = y + 32
@@ -297,7 +363,6 @@ local function CreateGUI()
         CreateSlider(combatFrame, "TriggerBot Delay", "TriggerBotDelay", 0.05, 0.5, y, true); y = y + 30
         combatFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- 2. AIMBOT TAB
         local aimbotFrame = contentFrames["Aimbot"]
         y = 5
         CreateCheckbox(aimbotFrame, "Aimbot", "Aimbot", y); y = y + 32
@@ -307,7 +372,6 @@ local function CreateGUI()
         CreateSlider(aimbotFrame, "Smoothness", "AimbotSmooth", 0, 1, y, true); y = y + 30
         aimbotFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- 3. ESP TAB
         local espFrame = contentFrames["ESP"]
         y = 5
         CreateCheckbox(espFrame, "ESP", "ESP", y); y = y + 32
@@ -316,9 +380,9 @@ local function CreateGUI()
         CreateCheckbox(espFrame, "ESP Roles", "ESPRoles", y); y = y + 32
         CreateCheckbox(espFrame, "ESP Health", "ESPHealth", y); y = y + 32
         CreateCheckbox(espFrame, "ESP Head Dot", "ESPHeadDot", y); y = y + 32
+        CreateCheckbox(espFrame, "ESP Gun", "ESPGun", y); y = y + 32  -- НОВАЯ ФУНКЦИЯ
         espFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- 4. VISUALS TAB
         local visualsFrame = contentFrames["Visuals"]
         y = 5
         CreateCheckbox(visualsFrame, "FullBright", "FullBright", y); y = y + 32
@@ -327,20 +391,18 @@ local function CreateGUI()
         CreateSlider(visualsFrame, "Saturation", "Saturation", 0, 2, y, true); y = y + 30
         visualsFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- 5. MISC TAB
         local miscFrame = contentFrames["Misc"]
         y = 5
         CreateCheckbox(miscFrame, "Walkspeed", "Walkspeed", y); y = y + 32
         CreateCheckbox(miscFrame, "Jump Power", "JumpPower", y); y = y + 32
         CreateCheckbox(miscFrame, "Fly", "Fly", y); y = y + 32
-        CreateCheckbox(miscFrame, "NoClip", "NoClip", y); y = y + 32   -- НОВАЯ ФУНКЦИЯ
+        CreateCheckbox(miscFrame, "NoClip", "NoClip", y); y = y + 32
         CreateCheckbox(miscFrame, "Anti AFK", "AntiAFK", y); y = y + 38
         CreateSlider(miscFrame, "Walkspeed", "WalkspeedValue", 0, 100, y); y = y + 30
         CreateSlider(miscFrame, "Jump Power", "JumpPowerValue", 0, 200, y); y = y + 30
         CreateSlider(miscFrame, "Fly Speed", "FlySpeed", 10, 200, y); y = y + 30
         miscFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- Кнопка KILL ALL
         local killBtn = Instance.new("TextButton")
         killBtn.Size = UDim2.new(0.4, 0, 0, 35)
         killBtn.Position = UDim2.new(0.3, 0, 0, 485)
@@ -357,7 +419,6 @@ local function CreateGUI()
             print("[XENO] Kill All executed!")
         end)
         
-        -- Обработчик клавиши L
         UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
             if input.KeyCode == Enum.KeyCode[Keybinds.ToggleGUI] then
@@ -373,14 +434,94 @@ local function CreateGUI()
     end)
 end
 
--- ====================== ОСНОВНЫЕ ФУНКЦИИ ======================
+-- ====================== GUN ESP ======================
+local function ClearGunESP()
+    for _, obj in ipairs(Objects.GunESP) do
+        SafeCall(function()
+            if obj and obj.Parent then
+                obj:Destroy()
+            end
+        end)
+    end
+    Objects.GunESP = {}
+end
+
+local function CreateGunESP()
+    if not Settings.ESPGun then
+        ClearGunESP()
+        return
+    end
+    
+    SafeCall(function()
+        -- Очищаем старые объекты
+        ClearGunESP()
+        
+        -- Ищем все пистолеты в игре
+        local guns = Workspace:FindFirstChild("Guns") or Workspace
+        local gunObjects = {}
+        
+        -- Проверяем все объекты в Workspace
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            -- Ищем объекты, которые могут быть пистолетами
+            if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+                table.insert(gunObjects, obj)
+            elseif obj.Name:lower():find("gun") or obj.Name:lower():find("pistol") or obj.Name:lower():find("revolver") then
+                if obj:IsA("BasePart") or obj:IsA("Model") then
+                    table.insert(gunObjects, obj)
+                end
+            end
+        end
+        
+        -- Если есть объекты, создаём ESP
+        for _, gun in ipairs(gunObjects) do
+            local rootPart = gun:IsA("BasePart") and gun or gun:FindFirstChild("Handle") or gun:FindFirstChildOfClass("BasePart")
+            if rootPart then
+                -- Создаём подсветку
+                local glow = Instance.new("BoxHandleAdornment")
+                glow.Size = Vector3.new(1.5, 1.5, 1.5)
+                glow.Adornee = rootPart
+                glow.AlwaysOnTop = true
+                glow.Color3 = GUN_COLOR
+                glow.Transparency = 0.3
+                glow.Parent = rootPart
+                table.insert(Objects.GunESP, glow)
+                
+                -- Создаём билборд с надписью
+                local billboard = Instance.new("BillboardGui")
+                billboard.Adornee = rootPart
+                billboard.Size = UDim2.new(0, 100, 0, 30)
+                billboard.StudsOffset = Vector3.new(0, 2, 0)
+                billboard.AlwaysOnTop = true
+                billboard.Parent = rootPart
+                table.insert(Objects.GunESP, billboard)
+                
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.BackgroundTransparency = 1
+                label.Text = "🔫 GUN"
+                label.TextColor3 = GUN_COLOR
+                label.TextScaled = true
+                label.Font = Enum.Font.GothamBold
+                label.Parent = billboard
+                table.insert(Objects.GunESP, label)
+                
+                -- Анимация пульсации
+                local tween = TweenService:Create(glow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+                    Transparency = 0.1
+                })
+                tween:Play()
+            end
+        end
+    end)
+end
+
+-- ====================== ОСТАЛЬНЫЕ ФУНКЦИИ ======================
 
 local function GetRoleColor(player)
     local role = player:GetAttribute("Role") or "Innocent"
     return ROLE_COLORS[role] or ROLE_COLORS.Innocent
 end
 
--- Аимбот
 local function GetClosestTarget()
     local character = LocalPlayer.Character
     if not character then return nil end
@@ -418,7 +559,6 @@ local function GetClosestTarget()
     return bestTarget
 end
 
--- Kill All
 local function KillAll()
     if not Settings.KillAll then return end
     local character = LocalPlayer.Character
@@ -444,7 +584,6 @@ local function KillAll()
     end
 end
 
--- TriggerBot
 local function TriggerBot()
     if not Settings.TriggerBot then return end
     local mouse = LocalPlayer:GetMouse()
@@ -464,31 +603,19 @@ local function TriggerBot()
     end)
 end
 
--- ESP
-local ESPObjects = {}
-
 local function CreateESP()
     if not Settings.ESP then
-        for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
-            if string.find(v.Name, "ESP") then
-                v:Destroy()
-            end
-        end
-        ESPObjects = {}
+        ClearESP()
         return
     end
     
     SafeCall(function()
-        for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
-            if string.find(v.Name, "ESP") then
-                v:Destroy()
-            end
-        end
-        ESPObjects = {}
+        ClearESP()
         
         local espGui = Instance.new("ScreenGui")
         espGui.Name = "ESP_GUI"
         espGui.Parent = LocalPlayer.PlayerGui
+        table.insert(Objects.ESP, espGui)
         
         for _, player in ipairs(Players:GetPlayers()) do
             if player == LocalPlayer then continue end
@@ -509,7 +636,7 @@ local function CreateESP()
                 box.Color3 = color
                 box.Transparency = 0.5
                 box.Parent = espGui
-                table.insert(ESPObjects, box)
+                table.insert(Objects.ESP, box)
             end
             
             if Settings.ESPNames then
@@ -519,6 +646,7 @@ local function CreateESP()
                 nameGui.StudsOffset = Vector3.new(0, 3.5, 0)
                 nameGui.AlwaysOnTop = true
                 nameGui.Parent = espGui
+                table.insert(Objects.ESP, nameGui)
                 
                 local nameLabel = Instance.new("TextLabel")
                 nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
@@ -528,6 +656,7 @@ local function CreateESP()
                 nameLabel.TextScaled = true
                 nameLabel.Font = Enum.Font.GothamBold
                 nameLabel.Parent = nameGui
+                table.insert(Objects.ESP, nameLabel)
                 
                 if Settings.ESPRoles then
                     local roleLabel = Instance.new("TextLabel")
@@ -539,6 +668,7 @@ local function CreateESP()
                     roleLabel.TextScaled = true
                     roleLabel.Font = Enum.Font.GothamBold
                     roleLabel.Parent = nameGui
+                    table.insert(Objects.ESP, roleLabel)
                 end
             end
             
@@ -550,16 +680,19 @@ local function CreateESP()
                     dot.Size = UDim2.new(0, 15, 0, 15)
                     dot.AlwaysOnTop = true
                     dot.Parent = espGui
+                    table.insert(Objects.ESP, dot)
                     
                     local circle = Instance.new("Frame")
                     circle.Size = UDim2.new(1, 0, 1, 0)
                     circle.BackgroundColor3 = color
                     circle.BorderSizePixel = 0
                     circle.Parent = dot
+                    table.insert(Objects.ESP, circle)
                     
                     local corner = Instance.new("UICorner")
                     corner.CornerRadius = UDim.new(1, 0)
                     corner.Parent = circle
+                    table.insert(Objects.ESP, corner)
                 end
             end
             
@@ -570,18 +703,21 @@ local function CreateESP()
                 healthBar.StudsOffset = Vector3.new(0, 2.5, 0)
                 healthBar.AlwaysOnTop = true
                 healthBar.Parent = espGui
+                table.insert(Objects.ESP, healthBar)
                 
                 local bg = Instance.new("Frame")
                 bg.Size = UDim2.new(1, 0, 1, 0)
                 bg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                 bg.BorderSizePixel = 0
                 bg.Parent = healthBar
+                table.insert(Objects.ESP, bg)
                 
                 local fill = Instance.new("Frame")
                 fill.Size = UDim2.new(1, 0, 1, 0)
                 fill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
                 fill.BorderSizePixel = 0
                 fill.Parent = bg
+                table.insert(Objects.ESP, fill)
                 
                 local humanoid = character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
@@ -600,28 +736,6 @@ local function CreateESP()
     end)
 end
 
--- ====================== NOCLIP ======================
-local function ToggleNoClip()
-    Settings.NoClip = not Settings.NoClip
-    if Settings.NoClip then
-        print("[XENO] NoClip ON")
-    else
-        print("[XENO] NoClip OFF")
-    end
-end
-
-local function UpdateNoClip()
-    if not Settings.NoClip then return end
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-end
-
 -- ====================== ОБРАБОТЧИК БИНДОВ ======================
 local function SetupKeybinds()
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -629,221 +743,33 @@ local function SetupKeybinds()
         
         local key = input.KeyCode.Name
         
-        -- Toggle Aimbot
         if key == Keybinds.ToggleAimbot then
             Settings.Aimbot = not Settings.Aimbot
             print("[XENO] Aimbot: " .. (Settings.Aimbot and "ON" or "OFF"))
         end
         
-        -- Toggle ESP
         if key == Keybinds.ToggleESP then
             Settings.ESP = not Settings.ESP
+            if not Settings.ESP then ClearESP() end
             print("[XENO] ESP: " .. (Settings.ESP and "ON" or "OFF"))
         end
         
-        -- Toggle Fly
         if key == Keybinds.ToggleFly then
             Settings.Fly = not Settings.Fly
+            if not Settings.Fly then
+                local char = LocalPlayer.Character
+                if char then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then humanoid.PlatformStand = false end
+                end
+            end
             print("[XENO] Fly: " .. (Settings.Fly and "ON" or "OFF"))
         end
         
-        -- Toggle NoClip
         if key == Keybinds.ToggleNoClip then
-            ToggleNoClip()
-        end
-        
-        -- Toggle FullBright
-        if key == Keybinds.ToggleFullBright then
-            Settings.FullBright = not Settings.FullBright
-            print("[XENO] FullBright: " .. (Settings.FullBright and "ON" or "OFF"))
-        end
-        
-        -- Kill All
-        if key == Keybinds.KillAllKey then
-            Settings.KillAll = true
-            KillAll()
-            Settings.KillAll = false
-            print("[XENO] Kill All executed!")
-        end
-        
-        -- AutoStab
-        if key == Keybinds.AutoStabKey then
-            Settings.AutoStab = not Settings.AutoStab
-            print("[XENO] AutoStab: " .. (Settings.AutoStab and "ON" or "OFF"))
-        end
-    end)
-end
-
--- ====================== ОСНОВНОЙ ЦИКЛ ======================
-local function MainLoop()
-    SafeCall(function()
-        -- Аимбот
-        if Settings.Aimbot then
-            local target = GetClosestTarget()
-            if target and UserInputService:IsKeyDown(Enum.KeyCode[Settings.AimbotKey]) then
-                local targetPos = target.Position
-                local lookAt = CFrame.lookAt(Camera.CFrame.Position, targetPos)
-                Camera.CFrame = Camera.CFrame:Lerp(lookAt, Settings.AimbotSmooth)
-            end
-        end
-        
-        -- ESP
-        if Settings.ESP then
-            if not LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI") then
-                CreateESP()
-            end
-        else
-            local espGui = LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI")
-            if espGui then espGui:Destroy() end
-            ESPObjects = {}
-        end
-        
-        -- Visuals
-        if Settings.FullBright then
-            Lighting.Brightness = 5
-            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        else
-            Lighting.Brightness = 1
-            Lighting.Ambient = Color3.fromRGB(100, 100, 100)
-        end
-        
-        if Settings.NoFog then
-            Lighting.FogEnd = 1000
-        else
-            Lighting.FogEnd = 500
-        end
-        
-        -- Bloom
-        if Settings.Bloom then
-            local bloom = Lighting:FindFirstChild("Bloom")
-            if not bloom then
-                bloom = Instance.new("BloomEffect")
-                bloom.Name = "Bloom"
-                bloom.Parent = Lighting
-            end
-            bloom.Intensity = 0.5
-            bloom.Size = 50
-            bloom.Threshold = 0.8
-        else
-            local bloom = Lighting:FindFirstChild("Bloom")
-            if bloom then bloom:Destroy() end
-        end
-        
-        -- Saturation
-        local cc = Lighting:FindFirstChild("ColorCorrection")
-        if not cc then
-            cc = Instance.new("ColorCorrectionEffect")
-            cc.Name = "ColorCorrection"
-            cc.Parent = Lighting
-        end
-        cc.Saturation = Settings.Saturation
-        cc.Contrast = 1.1
-        
-        -- Walkspeed / JumpPower / Fly / NoClip
-        local character = LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                if Settings.Walkspeed then
-                    humanoid.WalkSpeed = Settings.WalkspeedValue
-                end
-                
-                if Settings.JumpPower then
-                    humanoid.JumpPower = Settings.JumpPowerValue
-                end
-                
-                if Settings.Fly then
-                    humanoid.PlatformStand = true
-                    local root = character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        local direction = Vector3.new()
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode[Keybinds.FlyUp]) then direction = direction + Vector3.new(0, 1, 0) end
-                        if UserInputService:IsKeyDown(Enum.KeyCode[Keybinds.FlyDown]) then direction = direction - Vector3.new(0, 1, 0) end
-                        if direction.Magnitude > 0 then
-                            root.Velocity = direction.Unit * Settings.FlySpeed
-                        end
-                    end
-                end
-                
-                -- NoClip
-                if Settings.NoClip then
-                    UpdateNoClip()
-                end
-            end
-        end
-        
-        -- TriggerBot
-        if Settings.TriggerBot then
-            TriggerBot()
-            wait(Settings.TriggerBotDelay)
-        end
-        
-        -- AutoStab
-        if Settings.AutoStab then
-            local character = LocalPlayer.Character
-            if character then
-                local root = character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player == LocalPlayer then continue end
-                        local targetChar = player.Character
-                        if not targetChar then continue end
-                        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-                        if not targetRoot then continue end
-                        
-                        local distance = (root.Position - targetRoot.Position).Magnitude
-                        if distance <= Settings.AutoStabRange then
-                            SafeCall(function()
-                                local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-                                if remote then
-                                    remote:FireServer(player, "Stab")
-                                end
-                            end)
-                            break
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- ====================== ЗАПУСК ======================
-print("[XENO] Loading MM2 Ultimate v5.4 (Keybinds + NoClip)...")
-
--- Создание GUI
-CreateGUI()
-
--- Настройка биндов
-SetupKeybinds()
-
--- Запуск основного цикла
-RunService.Heartbeat:Connect(MainLoop)
-
--- Анти-АФК
-if Settings.AntiAFK then
-    SafeCall(function()
-        local VirtualUser = game:GetService("VirtualUser")
-        LocalPlayer.Idled:Connect(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
-    end)
-end
-
--- Уведомление
-StarterGui:SetCore("SendNotification", {
-    Title = "MM2 ULTIMATE v5.4",
-    Text = "✅ Script loaded! Press L for GUI\nP=Aimbot | O=ESP | K=Fly | N=NoClip\nEnd=KillAll | Home=AutoStab",
-    Duration = 6
-})
-
-print("[XENO] ✅ MM2 Ultimate v5.4 loaded successfully!")
-print("[XENO] 🎮 Press L to open/close GUI")
-print("[XENO] ⌨️ P=Aimbot | O=ESP | K=Fly | N=NoClip")
-print("[XENO] ⌨️ End=KillAll | Home=AutoStab")
-print("[XENO] 🟢 Innocent | 🔴 Murderer | 🔵 Sheriff")
+            Settings.NoClip = not Settings.NoClip
+            if not Settings.NoClip then
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetChildren()) do
+                       
