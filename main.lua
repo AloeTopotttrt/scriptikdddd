@@ -1,6 +1,6 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v5.1 [XENO FULLY WORKING]
+-- Murder Mystery 2 ULTIMATE SCRIPT v5.3 [XENO] - ЦВЕТНАЯ ПОДСВЕТКА РОЛЕЙ
 -- GUI Key: L
--- Все функции работают, полный набор настроек
+-- Innocent = Зелёный, Murderer = Красный, Sheriff = Синий
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -28,7 +28,6 @@ local Settings = {
     AimbotRange = 80,
     AimbotSmooth = 0.3,
     AimbotKey = "LeftAlt",
-    AimbotPriority = "Distance",
     
     -- ESP
     ESP = true,
@@ -36,13 +35,11 @@ local Settings = {
     ESPNames = true,
     ESPRoles = true,
     ESPHealth = true,
-    ESPDistance = true,
     ESPHeadDot = true,
     
     -- Visuals
     FullBright = false,
     NoFog = false,
-    Tracers = false,
     Bloom = true,
     Saturation = 1.2,
     
@@ -57,6 +54,13 @@ local Settings = {
     TeamCheck = false
 }
 
+-- ====================== ЦВЕТА РОЛЕЙ ======================
+local ROLE_COLORS = {
+    Innocent = Color3.fromRGB(0, 255, 0),    -- Зелёный
+    Murderer = Color3.fromRGB(255, 0, 0),    -- Красный
+    Sheriff = Color3.fromRGB(0, 100, 255)    -- Синий
+}
+
 -- ====================== БЕЗОПАСНЫЙ ВЫЗОВ ======================
 local function SafeCall(func)
     local success, err = pcall(func)
@@ -67,7 +71,7 @@ local function SafeCall(func)
     return true
 end
 
--- ====================== GUI ======================
+-- ====================== СОЗДАНИЕ GUI ======================
 local GUI = {}
 GUI.Visible = true
 
@@ -84,9 +88,10 @@ local function CreateGUI()
         screenGui.Name = "MM2_GUI"
         screenGui.Parent = LocalPlayer.PlayerGui
         
+        -- Основное окно
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 340, 0, 480)
-        mainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
+        mainFrame.Size = UDim2.new(0, 350, 0, 500)
+        mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
         mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
         mainFrame.BorderSizePixel = 2
         mainFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
@@ -98,7 +103,7 @@ local function CreateGUI()
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, 0, 0, 35)
         title.BackgroundTransparency = 1
-        title.Text = "⚡ MM2 ULTIMATE v5.1 ⚡"
+        title.Text = "⚡ MM2 ULTIMATE v5.3 ⚡"
         title.TextColor3 = Color3.fromRGB(0, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 18
@@ -127,12 +132,18 @@ local function CreateGUI()
         tabContainer.BackgroundTransparency = 1
         tabContainer.Parent = mainFrame
         
-        -- Создание вкладок
+        -- Контейнер для содержимого
+        local contentContainer = Instance.new("Frame")
+        contentContainer.Size = UDim2.new(1, 0, 1, -78)
+        contentContainer.Position = UDim2.new(0, 0, 0, 78)
+        contentContainer.BackgroundTransparency = 1
+        contentContainer.Parent = mainFrame
+        
+        -- Вкладки
         local tabs = {"Combat", "Aimbot", "ESP", "Visuals", "Misc"}
         local tabButtons = {}
         local contentFrames = {}
         
-        -- Создаём контент для каждой вкладки
         for i, tabName in ipairs(tabs) do
             -- Кнопка вкладки
             local btn = Instance.new("TextButton")
@@ -147,19 +158,20 @@ local function CreateGUI()
             btn.BorderColor3 = Color3.fromRGB(60, 60, 80)
             btn.Parent = tabContainer
             
-            -- Контейнер для содержимого вкладки
+            -- Контент вкладки (ScrollingFrame)
             local content = Instance.new("ScrollingFrame")
-            content.Size = UDim2.new(0.95, 0, 0, 0.7)
-            content.Position = UDim2.new(0.025, 0, 0, 78)
+            content.Size = UDim2.new(1, 0, 1, 0)
+            content.Position = UDim2.new(0, 0, 0, 0)
             content.BackgroundTransparency = 1
+            content.BorderSizePixel = 0
+            content.CanvasSize = UDim2.new(0, 0, 0, 0)
+            content.ScrollBarThickness = 6
             content.Visible = (i == 1)
-            content.Parent = mainFrame
-            contentFrames[tabName] = content
+            content.Parent = contentContainer
             
-            -- Сохраняем кнопку
+            contentFrames[tabName] = content
             tabButtons[tabName] = btn
             
-            -- Обработчик клика по вкладке
             btn.MouseButton1Down:Connect(function()
                 for name, frame in pairs(contentFrames) do
                     frame.Visible = (name == tabName)
@@ -172,9 +184,7 @@ local function CreateGUI()
         end
         tabButtons["Combat"].BackgroundColor3 = Color3.fromRGB(80, 40, 100)
         
-        -- ===== ФУНКЦИИ СОЗДАНИЯ ЭЛЕМЕНТОВ =====
-        
-        -- Чекбокс
+        -- Функции создания элементов
         local function CreateCheckbox(parent, name, setting, yPos)
             local box = Instance.new("TextButton")
             box.Size = UDim2.new(0.9, 0, 0, 28)
@@ -193,10 +203,11 @@ local function CreateGUI()
                 box.Text = (Settings[setting] and "✅ " or "⬜ ") .. name .. ": " .. (Settings[setting] and "ON" or "OFF")
                 box.TextColor3 = Settings[setting] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 200, 200)
             end)
+            
+            parent.CanvasSize = UDim2.new(0, 0, 0, yPos + 40)
             return box
         end
         
-        -- Слайдер
         local function CreateSlider(parent, name, setting, min, max, yPos, isFloat)
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.4, 0, 0, 22)
@@ -243,6 +254,8 @@ local function CreateGUI()
                     label.Text = name .. ": " .. tostring(newVal)
                 end
             end)
+            
+            parent.CanvasSize = UDim2.new(0, 0, 0, yPos + 40)
             return slider
         end
         
@@ -258,6 +271,7 @@ local function CreateGUI()
         CreateSlider(combatFrame, "Kill Range", "KillAllRange", 10, 200, y); y = y + 30
         CreateSlider(combatFrame, "AutoStab Range", "AutoStabRange", 1, 20, y); y = y + 30
         CreateSlider(combatFrame, "TriggerBot Delay", "TriggerBotDelay", 0.05, 0.5, y, true); y = y + 30
+        combatFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
         -- 2. AIMBOT TAB
         local aimbotFrame = contentFrames["Aimbot"]
@@ -267,6 +281,7 @@ local function CreateGUI()
         CreateSlider(aimbotFrame, "FOV", "AimbotFOV", 10, 180, y); y = y + 30
         CreateSlider(aimbotFrame, "Range", "AimbotRange", 10, 200, y); y = y + 30
         CreateSlider(aimbotFrame, "Smoothness", "AimbotSmooth", 0, 1, y, true); y = y + 30
+        aimbotFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
         -- 3. ESP TAB
         local espFrame = contentFrames["ESP"]
@@ -276,17 +291,17 @@ local function CreateGUI()
         CreateCheckbox(espFrame, "ESP Names", "ESPNames", y); y = y + 32
         CreateCheckbox(espFrame, "ESP Roles", "ESPRoles", y); y = y + 32
         CreateCheckbox(espFrame, "ESP Health", "ESPHealth", y); y = y + 32
-        CreateCheckbox(espFrame, "ESP Distance", "ESPDistance", y); y = y + 32
         CreateCheckbox(espFrame, "ESP Head Dot", "ESPHeadDot", y); y = y + 32
+        espFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
         -- 4. VISUALS TAB
         local visualsFrame = contentFrames["Visuals"]
         y = 5
         CreateCheckbox(visualsFrame, "FullBright", "FullBright", y); y = y + 32
         CreateCheckbox(visualsFrame, "No Fog", "NoFog", y); y = y + 32
-        CreateCheckbox(visualsFrame, "Tracers", "Tracers", y); y = y + 32
         CreateCheckbox(visualsFrame, "Bloom", "Bloom", y); y = y + 38
         CreateSlider(visualsFrame, "Saturation", "Saturation", 0, 2, y, true); y = y + 30
+        visualsFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
         -- 5. MISC TAB
         local miscFrame = contentFrames["Misc"]
@@ -298,11 +313,12 @@ local function CreateGUI()
         CreateSlider(miscFrame, "Walkspeed", "WalkspeedValue", 0, 100, y); y = y + 30
         CreateSlider(miscFrame, "Jump Power", "JumpPowerValue", 0, 200, y); y = y + 30
         CreateSlider(miscFrame, "Fly Speed", "FlySpeed", 10, 200, y); y = y + 30
+        miscFrame.CanvasSize = UDim2.new(0, 0, 0, y + 20)
         
-        -- Кнопка KILL ALL (внизу)
+        -- Кнопка KILL ALL
         local killBtn = Instance.new("TextButton")
         killBtn.Size = UDim2.new(0.4, 0, 0, 35)
-        killBtn.Position = UDim2.new(0.3, 0, 0, 435)
+        killBtn.Position = UDim2.new(0.3, 0, 0, 455)
         killBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         killBtn.Text = "💀 KILL ALL 💀"
         killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -332,7 +348,13 @@ local function CreateGUI()
     end)
 end
 
--- ====================== ОСНОВНЫЕ ФУНКЦИИ ======================
+-- ====================== ОСНОВНЫЕ ФУНКЦИИ (С ЦВЕТАМИ) ======================
+
+-- Функция получения цвета по роли
+local function GetRoleColor(player)
+    local role = player:GetAttribute("Role") or "Innocent"
+    return ROLE_COLORS[role] or ROLE_COLORS.Innocent
+end
 
 -- Аимбот
 local function GetClosestTarget()
@@ -392,13 +414,6 @@ local function KillAll()
                 if remote then
                     remote:FireServer(player, "Stab")
                 end
-                
-                local tool = character:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
-                    wait(0.1)
-                    tool:Deactivate()
-                end
             end)
             wait(Settings.KillAllDelay)
         end
@@ -425,11 +440,18 @@ local function TriggerBot()
     end)
 end
 
--- ESP
+-- ====================== ESP С ЦВЕТНОЙ ПОДСВЕТКОЙ РОЛЕЙ ======================
+local ESPObjects = {}
+
 local function CreateESP()
     if not Settings.ESP then
-        local espGui = LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI")
-        if espGui then espGui:Destroy() end
+        -- Удаляем ESP
+        for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
+            if string.find(v.Name, "ESP") then
+                v:Destroy()
+            end
+        end
+        ESPObjects = {}
         return
     end
     
@@ -440,6 +462,7 @@ local function CreateESP()
                 v:Destroy()
             end
         end
+        ESPObjects = {}
         
         local espGui = Instance.new("ScreenGui")
         espGui.Name = "ESP_GUI"
@@ -449,18 +472,15 @@ local function CreateESP()
             if player == LocalPlayer then continue end
             local character = player.Character
             if not character then continue end
+            
             local root = character:FindFirstChild("HumanoidRootPart")
             if not root then continue end
             
+            -- Получаем цвет по роли
+            local color = GetRoleColor(player)
             local role = player:GetAttribute("Role") or "Innocent"
-            local colors = {
-                Murderer = Color3.fromRGB(255, 0, 0),
-                Sheriff = Color3.fromRGB(0, 100, 255),
-                Innocent = Color3.fromRGB(0, 255, 0)
-            }
-            local color = colors[role] or Color3.fromRGB(255, 0, 0)
             
-            -- Бокс
+            -- 1. БОКС (Box) - цвет зависит от роли
             if Settings.ESPBoxes then
                 local box = Instance.new("BoxHandleAdornment")
                 box.Size = Vector3.new(2.5, 4.5, 2.5)
@@ -469,41 +489,43 @@ local function CreateESP()
                 box.Color3 = color
                 box.Transparency = 0.5
                 box.Parent = espGui
+                table.insert(ESPObjects, box)
             end
             
-            -- Имя
+            -- 2. ИМЯ + РОЛЬ
             if Settings.ESPNames then
                 local nameGui = Instance.new("BillboardGui")
                 nameGui.Adornee = root
-                nameGui.Size = UDim2.new(0, 200, 0, 40)
+                nameGui.Size = UDim2.new(0, 220, 0, 50)
                 nameGui.StudsOffset = Vector3.new(0, 3.5, 0)
                 nameGui.AlwaysOnTop = true
                 nameGui.Parent = espGui
                 
-                local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.BackgroundTransparency = 1
-                label.Text = player.Name
-                label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                label.TextScaled = true
-                label.Font = Enum.Font.GothamBold
-                label.Parent = nameGui
+                -- Имя игрока (белое)
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Text = player.Name
+                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                nameLabel.TextScaled = true
+                nameLabel.Font = Enum.Font.GothamBold
+                nameLabel.Parent = nameGui
                 
-                -- Роль
+                -- Роль (цветная)
                 if Settings.ESPRoles then
                     local roleLabel = Instance.new("TextLabel")
-                    roleLabel.Size = UDim2.new(1, 0, 0.4, 0)
-                    roleLabel.Position = UDim2.new(0, 0, 0.6, 0)
+                    roleLabel.Size = UDim2.new(1, 0, 0.5, 0)
+                    roleLabel.Position = UDim2.new(0, 0, 0.5, 0)
                     roleLabel.BackgroundTransparency = 1
                     roleLabel.Text = role
                     roleLabel.TextColor3 = color
                     roleLabel.TextScaled = true
-                    roleLabel.Font = Enum.Font.Gotham
+                    roleLabel.Font = Enum.Font.GothamBold
                     roleLabel.Parent = nameGui
                 end
             end
             
-            -- Точка на голове
+            -- 3. ТОЧКА НА ГОЛОВЕ (цветная)
             if Settings.ESPHeadDot then
                 local head = character:FindFirstChild("Head")
                 if head then
@@ -524,6 +546,54 @@ local function CreateESP()
                     corner.Parent = circle
                 end
             end
+            
+            -- 4. HP БАР (зелёный → красный в зависимости от здоровья)
+            if Settings.ESPHealth then
+                local healthBar = Instance.new("BillboardGui")
+                healthBar.Adornee = root
+                healthBar.Size = UDim2.new(0, 50, 0, 5)
+                healthBar.StudsOffset = Vector3.new(0, 2.5, 0)
+                healthBar.AlwaysOnTop = true
+                healthBar.Parent = espGui
+                
+                local bg = Instance.new("Frame")
+                bg.Size = UDim2.new(1, 0, 1, 0)
+                bg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                bg.BorderSizePixel = 0
+                bg.Parent = healthBar
+                
+                local fill = Instance.new("Frame")
+                fill.Size = UDim2.new(1, 0, 1, 0)
+                fill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                fill.BorderSizePixel = 0
+                fill.Parent = bg
+                
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        fill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                        fill.BackgroundColor3 = Color3.fromRGB(
+                            255 * (1 - healthPercent),
+                            255 * healthPercent,
+                            0
+                        )
+                    end)
+                end
+            end
+        end
+        
+        -- Подписываемся на изменения ролей (динамическое обновление)
+        local function UpdateESP()
+            -- Просто пересоздаём ESP при смене роли
+            CreateESP()
+        end
+        
+        -- Следим за изменением роли у всех игроков
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                player:GetAttributeChangedSignal("Role"):Connect(UpdateESP)
+            end
         end
     end)
 end
@@ -541,7 +611,7 @@ local function MainLoop()
             end
         end
         
-        -- ESP
+        -- ESP (обновляем раз в 5 секунд для синхронизации цветов)
         if Settings.ESP then
             if not LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI") then
                 CreateESP()
@@ -549,6 +619,7 @@ local function MainLoop()
         else
             local espGui = LocalPlayer.PlayerGui:FindFirstChild("ESP_GUI")
             if espGui then espGui:Destroy() end
+            ESPObjects = {}
         end
         
         -- Visuals
@@ -661,7 +732,7 @@ local function MainLoop()
 end
 
 -- ====================== ЗАПУСК ======================
-print("[XENO] Loading MM2 Ultimate v5.1...")
+print("[XENO] Loading MM2 Ultimate v5.3 (Color Roles)...")
 
 -- Создание GUI
 CreateGUI()
@@ -682,11 +753,11 @@ end
 
 -- Уведомление
 StarterGui:SetCore("SendNotification", {
-    Title = "MM2 ULTIMATE v5.1",
-    Text = "✅ Script loaded! Press L to open/close menu",
-    Duration = 4
+    Title = "MM2 ULTIMATE v5.3",
+    Text = "✅ Script loaded! Press L to open/close menu\n🟢 Innocent | 🔴 Murderer | 🔵 Sheriff",
+    Duration = 5
 })
 
-print("[XENO] ✅ MM2 Ultimate v5.1 loaded successfully!")
+print("[XENO] ✅ MM2 Ultimate v5.3 loaded successfully!")
 print("[XENO] 🎮 Press L to open/close the GUI")
-print("[XENO] 📋 Все вкладки заполнены функциями!")
+print("[XENO] 🟢 Innocent = Green | 🔴 Murderer = Red | 🔵 Sheriff = Blue")
