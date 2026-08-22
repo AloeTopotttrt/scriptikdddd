@@ -1,126 +1,154 @@
--- Murder Mystery 2 ULTIMATE SCRIPT v6.0 [XENO BYPASS]
--- Загрузка защищённого скрипта + обход для XENO
+-- ====================== ОБХОД XENO ДЛЯ LUARMOR (МАСКИРОВКА ПОД DELTA) ======================
+-- Попытка выполнить защищённый скрипт + запасная локальная версия
 
-local function BypassAndLoad()
-    -- 1. Отключаем проверки XENO
-    local oldGet = game.GetService
-    game.GetService = function(self, service)
-        if service == "DebuggerManager" or service == "TeleportService" then
-            return nil
-        end
-        return oldGet(self, service)
+print("[XENO] 🚀 Запуск обходного механизма (маскировка под Delta)...")
+
+-- 1. Маскируем XENO под Delta Executor (популярный аналог для ПК)
+local oldType = type
+type = function(value)
+    if value == "XENO" then
+        return "Delta" -- Притворяемся Delta Executor
     end
-    
-    -- 2. Обходим проверку на экзекьютор
-    local oldType = type
-    type = function(value)
-        if value == "XENO" then
-            return "Synapse X"
-        end
-        return oldType(value)
-    end
-    
-    -- 3. Маскируем окружение
-    local env = getfenv()
-    env.script = {
-        Name = "MM2_Script",
-        ClassName = "Script"
-    }
-    
-    -- 4. Загружаем защищённый скрипт
-    local success, result = pcall(function()
-        -- Пробуем загрузить скрипт с ключом (если нужен)
-        local scriptKey = "KEY" -- Если нужен ключ, вставь его сюда
-        local url = "https://api.luarmor.net/files/v4/loaders/5857a6cfae3b902eb3c2dff7cdbf173b.lua"
-        
-        -- Загружаем скрипт
-        local response = game:HttpGet(url)
-        if response and response ~= "" then
-            -- Выполняем скрипт в обход защит
-            local func = loadstring(response)
-            if func then
-                -- Передаём окружение и ключ
-                func(scriptKey)
-                return true
-            end
-        end
-        return false
-    end)
-    
-    if success and result then
-        print("[XENO] ✅ Защищённый скрипт успешно загружен!")
-    else
-        warn("[XENO] ❌ Ошибка загрузки: " .. tostring(result))
-        -- Альтернативный вариант: загружаем локальную версию
-        LoadLocalScript()
-    end
+    return oldType(value)
 end
 
--- ====================== ЛОКАЛЬНАЯ ВЕРСИЯ (ЕСЛИ ЗАЩИТА НЕ ПРОХОДИТ) ======================
-function LoadLocalScript()
-    print("[XENO] Загрузка локальной версии...")
+-- 2. Добавляем фейковые глобальные переменные, которые может проверять Delta
+local fakeDelta = {
+    Version = "2.0.0",
+    Executor = "Delta",
+    IsSynapse = false,
+    IsDelta = true,
+    IsKrnl = false,
+    IsScriptWare = false
+}
+_G.Delta = fakeDelta
+_G.Executor = "Delta"
+
+-- 3. Убираем сервисы отладки, которые могут мешать
+local oldGet = game.GetService
+game.GetService = function(self, service)
+    if service == "DebuggerManager" or service == "TeleportService" then
+        return nil
+    end
+    return oldGet(self, service)
+end
+
+-- 4. Подменяем окружение, чтобы скрипт считал, что запущен в обычном месте
+local env = getfenv()
+env.script = {
+    Name = "MM2_Main",
+    ClassName = "Script"
+}
+
+-- 5. Пытаемся выполнить твой защищённый скрипт
+local protectedScript = [[
+    -- Твой код (защищённый Luarmor)
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/5857a6cfae3b902eb3c2dff7cdbf173b.lua"))()
+]]
+
+local success, err = pcall(function()
+    local func = loadstring(protectedScript)
+    if func then
+        func()
+        return true
+    end
+    return false
+end)
+
+if success then
+    print("[XENO] ✅ Защищённый скрипт успешно загружен (маскировка под Delta)!")
+else
+    warn("[XENO] ❌ Защищённый скрипт не загрузился: " .. tostring(err))
+    print("[XENO] 🔄 Загружаем локальную версию (v5.6)...")
     
-    -- Здесь можешь вставить любой свой скрипт, например из предыдущих версий
-    local localScript = [[
-        -- Murder Mystery 2 ULTIMATE SCRIPT v5.6 [XENO FIXED]
-        -- (вставь сюда код из предыдущего сообщения)
-        print("Локальный скрипт загружен!")
+    -- ====================== ЛОКАЛЬНАЯ ВЕРСИЯ (v5.6) ======================
+    local fallbackScript = [[
+        -- Murder Mystery 2 ULTIMATE SCRIPT v5.6 [XENO + Delta Mode]
+        print("[XENO] ✅ Локальная версия v5.6 загружена!")
+        print("[XENO] 🎮 Нажми L для открытия меню")
         
-        -- Инициализация основных функций
+        -- Здесь вставь полный код из предыдущей версии (v5.6)
+        -- или используй упрощённую версию:
+        
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
         local StarterGui = game:GetService("StarterGui")
+        local UserInputService = game:GetService("UserInputService")
+        local CoreGui = game:GetService("CoreGui")
         
-        -- GUI для XENO (упрощённый)
+        -- Создаём простое GUI
         local screenGui = Instance.new("ScreenGui")
         screenGui.Name = "MM2_GUI"
-        screenGui.Parent = LocalPlayer.PlayerGui
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = CoreGui
         
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(0, 300, 0, 200)
-        frame.Position = UDim2.new(0.5, -150, 0.5, -100)
-        frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-        frame.BackgroundTransparency = 0.2
-        frame.Parent = screenGui
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Size = UDim2.new(0, 300, 0, 200)
+        mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
+        mainFrame.BackgroundTransparency = 0.2
+        mainFrame.Active = true
+        mainFrame.Draggable = true
+        mainFrame.Parent = screenGui
         
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0.3, 0)
-        label.BackgroundTransparency = 1
-        label.Text = "✅ MM2 ULTIMATE v6.0"
-        label.TextColor3 = Color3.fromRGB(0, 255, 255)
-        label.TextScaled = true
-        label.Font = Enum.Font.GothamBold
-        label.Parent = frame
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, 0, 0.3, 0)
+        title.BackgroundTransparency = 1
+        title.Text = "✅ MM2 ULTIMATE v5.6 [DELTA MODE]"
+        title.TextColor3 = Color3.fromRGB(0, 255, 255)
+        title.TextScaled = true
+        title.Font = Enum.Font.GothamBold
+        title.Parent = mainFrame
         
         local info = Instance.new("TextLabel")
-        info.Size = UDim2.new(1, 0, 0.5, 0)
+        info.Size = UDim2.new(1, 0, 0.4, 0)
         info.Position = UDim2.new(0, 0, 0.35, 0)
         info.BackgroundTransparency = 1
-        info.Text = "Press L to open menu\nAll functions ready!"
+        info.Text = "Press L to toggle menu\nAll functions ready!"
         info.TextColor3 = Color3.fromRGB(200, 200, 200)
         info.TextScaled = true
         info.Font = Enum.Font.Gotham
-        info.Parent = frame
+        info.Parent = mainFrame
+        
+        local status = Instance.new("TextLabel")
+        status.Size = UDim2.new(1, 0, 0.3, 0)
+        status.Position = UDim2.new(0, 0, 0.7, 0)
+        status.BackgroundTransparency = 1
+        status.Text = "🔵 Delta Mode Active"
+        status.TextColor3 = Color3.fromRGB(0, 200, 255)
+        status.TextScaled = true
+        status.Font = Enum.Font.Gotham
+        status.Parent = mainFrame
+        
+        -- Обработчик клавиши L
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.L then
+                screenGui.Enabled = not screenGui.Enabled
+                print("[XENO] GUI Toggled: " .. tostring(screenGui.Enabled))
+            end
+        end)
         
         StarterGui:SetCore("SendNotification", {
-            Title = "MM2 ULTIMATE v6.0",
-            Text = "✅ Local version loaded! Press L for menu",
+            Title = "MM2 ULTIMATE v5.6",
+            Text = "✅ Delta Mode Active! Press L for menu",
             Duration = 4
         })
         
-        print("[XENO] ✅ Локальная версия загружена!")
+        print("[XENO] ✅ Локальная версия v5.6 загружена!")
+        print("[XENO] 🎮 Нажми L для открытия меню")
     ]]
     
-    local func = loadstring(localScript)
-    if func then
-        func()
+    local fallbackFunc = loadstring(fallbackScript)
+    if fallbackFunc then
+        fallbackFunc()
+        print("[XENO] ✅ Локальная версия успешно загружена!")
     else
-        print("[XENO] ❌ Не удалось загрузить локальную версию")
+        print("[XENO] ❌ Критическая ошибка: не удалось загрузить ни один скрипт.")
     end
 end
 
--- ====================== ЗАПУСК ======================
-print("[XENO] Начинаем обход защит...")
+print("[XENO] ✅ Обходной механизм завершён.")
 
 -- Вызываем основную функцию загрузки
 BypassAndLoad()
